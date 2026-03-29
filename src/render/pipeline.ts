@@ -1,5 +1,5 @@
 import { parseTimeline } from './parser/index.js';
-import { buildScene, buildFrameAtTime } from './builder/index.js';
+import { buildScene } from './builder/index.js';
 import { captureFrames } from './capture/index.js';
 import { encode } from './encoder/index.js';
 import type { IRTimeline } from './parser/types.js';
@@ -60,14 +60,6 @@ export async function executePipeline(
       s.layers.some(l => l.effects.motion || l.timing.transitionIn || l.timing.transitionOut),
     );
 
-    // Use per-frame HTML generation when the scene has effects that need it
-    const hasEffects = ir.scenes.some(s =>
-      s.layers.some(l => l.effects.motion || l.timing.transitionIn || l.timing.transitionOut),
-    );
-    const frameHtmlBuilder = (hasEffects && !isStatic)
-      ? (time: number) => buildFrameAtTime(ir.scenes[0], ir.output, time)
-      : undefined;
-
     const captureResult = await captureFrames({
       html: sceneHtml,
       outputDir: frameDir,
@@ -76,7 +68,6 @@ export async function executePipeline(
       fps: ir.output.fps,
       duration: totalDuration,
       isStatic,
-      frameHtmlBuilder,
     });
     stageLogs.push(logStage('capture', stageStart));
 

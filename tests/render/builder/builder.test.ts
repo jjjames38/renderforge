@@ -346,7 +346,7 @@ describe('calcTimelineDuration', () => {
 });
 
 describe('buildScene timing visibility', () => {
-  it('generates visibility keyframes for layers with different start times', () => {
+  it('generates visibility keyframes for layers with different start times using wrapper divs', () => {
     const scene: IRScene = {
       startTime: 0,
       duration: 10,
@@ -357,10 +357,12 @@ describe('buildScene timing visibility', () => {
     };
     const html = buildScene(scene, makeOutput(), 10);
 
-    // Both layers should have visibility animations
+    // Both layers should have visibility animations on wrapper divs
     expect(html).toContain('@keyframes vis-0');
     expect(html).toContain('@keyframes vis-1');
-    // Layer 0: visible 0-50%, layer 1: visible 50-100%
+    // Wrapper divs get the visibility animation
+    expect(html).toContain('#layer-0-wrapper');
+    expect(html).toContain('#layer-1-wrapper');
     expect(html).toContain('animation: vis-0 10s step-end forwards');
     expect(html).toContain('animation: vis-1 10s step-end forwards');
   });
@@ -377,9 +379,10 @@ describe('buildScene timing visibility', () => {
 
     // Single layer covering entire timeline: no visibility animation needed
     expect(html).not.toContain('@keyframes vis-0');
+    expect(html).not.toContain('layer-0-wrapper');
   });
 
-  it('sets layer opacity to 0 by default when visibility animation is applied', () => {
+  it('sets wrapper opacity to 0 by default when visibility animation is applied', () => {
     const scene: IRScene = {
       startTime: 0,
       duration: 10,
@@ -389,7 +392,7 @@ describe('buildScene timing visibility', () => {
     };
     const html = buildScene(scene, makeOutput(), 10);
 
-    expect(html).toContain('#layer-0 { opacity: 0;');
+    expect(html).toContain('#layer-0-wrapper { opacity: 0;');
   });
 
   it('adds animation-delay to KenBurns matching layer start time', () => {
@@ -407,6 +410,8 @@ describe('buildScene timing visibility', () => {
 
     expect(html).toContain('animation-delay: 3s');
     expect(html).toContain('kb-zoomIn');
+    // KenBurns class should be on inner layer, visibility on wrapper
+    expect(html).toContain('layer-0-wrapper');
   });
 
   it('adds animation-delay to transition-in matching layer start time', () => {
@@ -458,9 +463,78 @@ describe('buildScene timing visibility', () => {
 
     // Background covers entire timeline - no visibility anim
     expect(html).not.toContain('@keyframes vis-0');
-    // Each subtitle gets its own visibility animation
+    // Each subtitle gets its own visibility animation on wrappers
     expect(html).toContain('@keyframes vis-1');
     expect(html).toContain('@keyframes vis-2');
     expect(html).toContain('@keyframes vis-3');
+    expect(html).toContain('layer-1-wrapper');
+    expect(html).toContain('layer-2-wrapper');
+    expect(html).toContain('layer-3-wrapper');
+  });
+
+  it('KenBurns and visibility work together without CSS conflicts', () => {
+    const scene: IRScene = {
+      startTime: 0,
+      duration: 18,
+      layers: [
+        makeImageLayer({
+          timing: { start: 0, duration: 6 },
+          effects: { motion: 'zoomIn' },
+        }),
+        makeImageLayer({
+          timing: { start: 6, duration: 6 },
+          effects: { motion: 'slideLeft' },
+        }),
+        makeImageLayer({
+          timing: { start: 12, duration: 6 },
+          effects: { motion: 'zoomOut' },
+        }),
+      ],
+    };
+    const html = buildScene(scene, makeOutput(), 18);
+
+    // Each layer should have wrapper for visibility and inner class for KenBurns
+    expect(html).toContain('layer-0-wrapper');
+    expect(html).toContain('kb-zoomIn');
+    expect(html).toContain('layer-1-wrapper');
+    expect(html).toContain('kb-slideLeft');
+    expect(html).toContain('layer-2-wrapper');
+    expect(html).toContain('kb-zoomOut');
+
+    // Visibility animates opacity on wrapper, KenBurns animates transform on inner
+    // These should not conflict because they target different elements
+    expect(html).toContain('@keyframes vis-0');
+    expect(html).toContain('@keyframes vis-1');
+    expect(html).toContain('@keyframes vis-2');
+    expect(html).toContain('@keyframes kb-zoomIn');
+    expect(html).toContain('@keyframes kb-slideLeft');
+    expect(html).toContain('@keyframes kb-zoomOut');
+  });
+
+  it('fade transition and visibility work together via wrapper div separation', () => {
+    const scene: IRScene = {
+      startTime: 0,
+      duration: 12,
+      layers: [
+        makeImageLayer({
+          timing: { start: 0, duration: 6, transitionIn: 'fade', transitionOut: 'fade' },
+          effects: { motion: 'zoomIn' },
+        }),
+        makeImageLayer({
+          timing: { start: 6, duration: 6, transitionIn: 'fade', transitionOut: 'fade' },
+          effects: { motion: 'zoomOut' },
+        }),
+      ],
+    };
+    const html = buildScene(scene, makeOutput(), 12);
+
+    // Visibility on wrappers
+    expect(html).toContain('layer-0-wrapper');
+    expect(html).toContain('layer-1-wrapper');
+    // Transitions and KenBurns on inner divs
+    expect(html).toContain('trans-in-fade');
+    expect(html).toContain('trans-out-fade');
+    expect(html).toContain('kb-zoomIn');
+    expect(html).toContain('kb-zoomOut');
   });
 });

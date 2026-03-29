@@ -11,9 +11,9 @@ import { renderShape } from '../assets/shape.js';
 import { renderSvg } from '../assets/svg.js';
 import { renderTitle } from '../assets/title.js';
 import { renderLuma } from '../assets/luma.js';
-import { buildKenBurns, getKenBurnsTransformAtTime } from '../effects/kenburns.js';
+import { buildKenBurns } from '../effects/kenburns.js';
 import { buildFilter } from '../effects/filters.js';
-import { buildTransitionIn, buildTransitionOut, getTransitionInStyleAtTime, getTransitionOutStyleAtTime, getTransitionDuration } from '../effects/transitions.js';
+import { buildTransitionIn, buildTransitionOut } from '../effects/transitions.js';
 
 /**
  * Render a single layer to HTML + CSS based on its asset type.
@@ -63,21 +63,22 @@ export function calcTimelineDuration(layers: IRLayer[]): number {
 }
 
 /**
- * Build CSS keyframes for timing-based layer visibility.
+ * Build CSS keyframes for timing-based layer visibility using a WRAPPER div.
  *
- * Each layer is hidden (opacity: 0) by default, then becomes visible
- * only during its [start, start+duration] window within the total timeline.
- * Uses CSS `step-end` timing so transitions are instant (no fade).
+ * The wrapper div controls opacity (show/hide) via step-end timing,
+ * leaving the inner layer div free to handle KenBurns (transform)
+ * and transitions (opacity for fade, transform for slides, etc.)
+ * without CSS animation property conflicts.
  */
 function buildVisibilityAnimation(
   index: number,
   start: number,
   duration: number,
   totalDuration: number,
-): { keyframes: string; style: string } {
+): { keyframes: string; wrapperStyle: string } {
   // Edge case: if totalDuration is 0 or layer covers the entire timeline, always show
   if (totalDuration <= 0 || (start <= 0 && duration >= totalDuration)) {
-    return { keyframes: '', style: '' };
+    return { keyframes: '', wrapperStyle: '' };
   }
 
   const startPct = (start / totalDuration) * 100;
@@ -91,21 +92,28 @@ function buildVisibilityAnimation(
   100% { opacity: 0; }
 }`;
 
-  const style = `#layer-${index} { opacity: 0; animation: ${name} ${totalDuration}s step-end forwards; }`;
+  const wrapperStyle = `#layer-${index}-wrapper { opacity: 0; animation: ${name} ${totalDuration}s step-end forwards; }`;
 
-  return { keyframes, style };
+  return { keyframes, wrapperStyle };
 }
 
 /**
  * Build the complete HTML page for a single scene.
  *
- * Layers are rendered with z-index so that the first layer in the array
- * appears on top (highest z-index), matching Shotstack's track ordering
- * where earlier tracks overlay later ones.
+ * Architecture: Each layer uses a wrapper div pattern:
+ *   <div id="layer-N-wrapper"> -- visibility animation (opacity via step-end)
+ *     <div id="layer-N" class="kb-xxx trans-in-xxx"> -- KenBurns + transitions
+ *       <img ...> (or text div, etc.)
+ *     </div>
+ *   </div>
  *
- * Each layer gets timing-based visibility so it only appears during its
- * [start, start+duration] window. KenBurns and transition animations
- * use animation-delay to match the layer's start time.
+ * This prevents CSS animation conflicts:
+ * - Wrapper animates opacity for visibility (step-end, no smooth transition)
+ * - Inner div animates transform (KenBurns) and can also animate opacity (fade transitions)
+ * - Multiple CSS animations on the inner div use comma-separated animation shorthand
+ *
+ * Layers are rendered with z-index so that the first layer in the array
+ * appears on top (highest z-index), matching Shotstack's track ordering.
  */
 export function buildScene(scene: IRScene, output: IROutput, totalDuration?: number): string {
   const allCss: string[] = [];
@@ -123,16 +131,21 @@ export function buildScene(scene: IRScene, output: IROutput, totalDuration?: num
     const { html, css } = renderLayer(layer, i);
     const classes: string[] = [];
 
-    // z-index: first layer on top
+    // z-index on wrapper so stacking order is correct
     const zIndex = totalLayers - i;
     let layerCss = css;
-    layerCss += `\n  #layer-${i} { z-index: ${zIndex}; }`;
 
-    // Timing-based visibility: show layer only during its time window
+    // Timing-based visibility on WRAPPER div
     const vis = buildVisibilityAnimation(i, layer.timing.start, layer.timing.duration, effectiveDuration);
-    if (vis.keyframes) {
+    const needsWrapper = !!vis.keyframes;
+
+    if (needsWrapper) {
       allCss.push(vis.keyframes);
-      layerCss += `\n  ${vis.style}`;
+      // Wrapper gets z-index and position so it stacks correctly
+      layerCss += `\n  #layer-${i}-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: ${zIndex}; }`;
+      layerCss += `\n  ${vis.wrapperStyle}`;
+    } else {
+      layerCss += `\n  #layer-${i} { z-index: ${zIndex}; }`;
     }
 
     // Apply motion (Ken Burns) effect with animation-delay matching layer start
@@ -158,7 +171,7 @@ export function buildScene(scene: IRScene, output: IROutput, totalDuration?: num
     }
 
     // Apply opacity (only when no visibility animation, to avoid conflicts)
-    if (layer.effects.opacity !== undefined && typeof layer.effects.opacity === 'number' && !vis.keyframes) {
+    if (layer.effects.opacity !== undefined && typeof layer.effects.opacity === 'number' && !needsWrapper) {
       layerCss += `\n  #layer-${i} { opacity: ${layer.effects.opacity}; }`;
     }
 
@@ -197,122 +210,20 @@ export function buildScene(scene: IRScene, output: IROutput, totalDuration?: num
 
     allCss.push(layerCss);
 
-    // Inject classes into the HTML element
+    // Build the inner layer HTML (with classes for KenBurns/transitions)
+    let innerHtml = html;
     if (classes.length > 0) {
-      const withClasses = html.replace(
+      innerHtml = html.replace(
         /id="layer-(\d+)"/,
         `id="layer-$1" class="${classes.join(' ')}"`
       );
-      allHtml.push(withClasses);
+    }
+
+    // Wrap in visibility wrapper if needed
+    if (needsWrapper) {
+      allHtml.push(`<div id="layer-${i}-wrapper">${innerHtml}</div>`);
     } else {
-      allHtml.push(html);
-    }
-  }
-
-  return wrapInHtml(allHtml.join('\n'), allCss.join('\n'), output.width, output.height);
-}
-
-/**
- * Build HTML for a single frame at a specific time.
- *
- * Instead of relying on CSS animations for visibility, KenBurns, and transitions,
- * this function computes the exact styles for each layer at the given time.
- * Only layers visible at time T are included. This eliminates CSS animation
- * timing conflicts between visibility, KenBurns, and transitions.
- */
-export function buildFrameAtTime(scene: IRScene, output: IROutput, time: number): string {
-  const allCss: string[] = [];
-  const allHtml: string[] = [];
-
-  const totalLayers = scene.layers.length;
-
-  for (let i = 0; i < totalLayers; i++) {
-    const layer = scene.layers[i];
-    if (layer.type !== 'visual') continue;
-
-    const layerStart = layer.timing.start;
-    const layerEnd = layerStart + layer.timing.duration;
-
-    // Skip layers not visible at this time
-    if (time < layerStart || time >= layerEnd) continue;
-
-    const { html, css } = renderLayer(layer, i);
-
-    // z-index: first layer on top
-    const zIndex = totalLayers - i;
-    let layerCss = css;
-    layerCss += `\n  #layer-${i} { z-index: ${zIndex}; }`;
-
-    // Time relative to layer start
-    const localTime = time - layerStart;
-    const inlineStyles: string[] = [];
-
-    // Compute KenBurns transform at this time
-    if (layer.effects.motion) {
-      const transform = getKenBurnsTransformAtTime(
-        layer.effects.motion,
-        localTime,
-        layer.timing.duration,
-      );
-      if (transform) {
-        inlineStyles.push(`transform: ${transform}`);
-      }
-    }
-
-    // Compute transition-in opacity/style at this time
-    if (layer.timing.transitionIn) {
-      const transStyle = getTransitionInStyleAtTime(layer.timing.transitionIn, localTime);
-      if (transStyle) {
-        inlineStyles.push(transStyle);
-      }
-    }
-
-    // Compute transition-out style at this time
-    if (layer.timing.transitionOut) {
-      const outDuration = getTransitionDuration(layer.timing.transitionOut);
-      const outStart = layer.timing.duration - outDuration;
-      const outLocalTime = localTime - outStart;
-      if (outLocalTime > 0) {
-        const transStyle = getTransitionOutStyleAtTime(layer.timing.transitionOut, outLocalTime);
-        if (transStyle) {
-          inlineStyles.push(transStyle);
-        }
-      }
-    }
-
-    // Apply filter effect
-    if (layer.effects.filter) {
-      const filterVal = buildFilter(layer.effects.filter);
-      if (filterVal) {
-        layerCss += `\n  #layer-${i} { ${filterVal}; }`;
-      }
-    }
-
-    // Apply static opacity (when not handled by transitions)
-    if (layer.effects.opacity !== undefined && typeof layer.effects.opacity === 'number') {
-      if (!layer.timing.transitionIn && !layer.timing.transitionOut) {
-        layerCss += `\n  #layer-${i} { opacity: ${layer.effects.opacity}; }`;
-      }
-    }
-
-    // Apply crop
-    if (layer.crop) {
-      const { top, bottom, left, right } = layer.crop;
-      layerCss += `\n  #layer-${i} { clip-path: inset(${top * 100}% ${right * 100}% ${bottom * 100}% ${left * 100}%); }`;
-    }
-
-    allCss.push(layerCss);
-
-    // Inject inline styles into the HTML element
-    if (inlineStyles.length > 0) {
-      const styleAttr = inlineStyles.join(' ');
-      const withStyle = html.replace(
-        /id="layer-(\d+)"/,
-        `id="layer-$1" style="${styleAttr}"`,
-      );
-      allHtml.push(withStyle);
-    } else {
-      allHtml.push(html);
+      allHtml.push(innerHtml);
     }
   }
 
