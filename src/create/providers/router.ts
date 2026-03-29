@@ -13,6 +13,7 @@ import { FluxKleinProvider } from './flux-klein.js';
 import { HunyuanLocalProvider } from './hunyuan-local.js';
 import { SeedanceRemoteProvider } from './seedance-remote.js';
 import { RealEsrganProvider } from './realesrgan.js';
+import { VoiceCoreTTSProvider } from './voicecore-tts.js';
 import { GPUMemoryManager } from '../gpu/memory-manager.js';
 import { logger } from '../config/logger.js';
 
@@ -30,6 +31,14 @@ export class ProviderRouter {
     this.providers.set('hunyuan-local', new HunyuanLocalProvider(config.hunyuan));
     this.providers.set('seedance-remote', new SeedanceRemoteProvider(config.seedance));
     this.providers.set('realesrgan', new RealEsrganProvider());
+
+    // Register VoiceCore TTS if configured
+    if (config.voicecore?.enabled) {
+      this.providers.set('voicecore-tts', new VoiceCoreTTSProvider({
+        host: config.voicecore.host,
+        port: config.voicecore.port,
+      }));
+    }
 
     logger.info('ProviderRouter initialized', {
       providers: Array.from(this.providers.keys()),
@@ -63,6 +72,15 @@ export class ProviderRouter {
    * Core routing logic.
    */
   private async selectProvider(req: GenerateRequest): Promise<ProviderName> {
+    // ── TTS ──
+    if (req.type === 'tts') {
+      const voicecore = this.providers.get('voicecore-tts');
+      if (voicecore && (await voicecore.isAvailable())) {
+        return 'voicecore-tts';
+      }
+      throw new Error('VoiceCore TTS not available. Ensure Fish Speech is running and VOICECORE_ENABLED=true.');
+    }
+
     // ── Upscale ──
     if (req.type === 'upscale') {
       return 'realesrgan';
@@ -114,6 +132,9 @@ export class ProviderRouter {
         break;
       case 'realesrgan':
         await this.gpu.ensureLoaded('realesrgan');
+        break;
+      // VoiceCore TTS — Fish Speech is always resident, no swap needed
+      case 'voicecore-tts':
         break;
       // Remote providers don't need GPU
       case 'seedance-remote':

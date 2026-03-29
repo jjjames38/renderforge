@@ -193,6 +193,26 @@ curl -X POST http://localhost:3000/edit/v1/template/{id}/render \
   -d '{ "merge": [{ "find": "TITLE", "replace": "My Video Title" }] }'
 ```
 
+## RunPod Unified Deployment (RTX 4090)
+
+Deploy all 3 AI engines on a single RunPod RTX 4090 instance:
+
+```bash
+docker compose -f docker/docker-compose.runpod.yml up -d
+```
+
+**VRAM Budget (24GB):**
+
+| Engine | VRAM | Purpose |
+|--------|------|---------|
+| Fish Speech TTS | 2GB (resident) | Text-to-speech |
+| Flux Klein 4B | 8GB (on-demand) | Text-to-image |
+| HunyuanVideo 1.5 | 14GB (on-demand) | Image-to-video |
+
+Compatible pairs: Fish Speech + Flux (10GB), Fish Speech + Hunyuan (16GB with CPU offload).
+
+**Cost:** ~$50/month (RunPod RTX 4090) vs $5,522/month with external APIs.
+
 ## n8n Integration (Shotstack Migration)
 
 RenderForge is a **drop-in replacement** for Shotstack in n8n workflows. To migrate:

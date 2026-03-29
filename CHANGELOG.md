@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.3.0] - 2026-03-29
+
+### VoiceCore TTS Integration
+
+Add Fish Speech TTS provider for local text-to-speech generation.
+VoiceCore is disabled by default (opt-in via `VOICECORE_ENABLED=true`).
+
+#### Features
+- **VoiceCore TTS Provider** — Fish Speech v1.5 local TTS via REST API
+- `tts` type added to Create API (alongside text-to-image, image-to-video, upscale)
+- ProviderRouter routes `type: 'tts'` to VoiceCoreTTSProvider
+- Tier voice references via `style` field (maps to Fish Speech `reference_id`)
+- WAV output saved to local storage, served via Serve API
+
+#### RunPod Unified Deployment
+- `docker-compose.runpod.yml` — single RTX 4090 runs all 3 engines
+- VoiceCore Dockerfile (Fish Speech v1.5 + CUDA 12.4)
+- VRAM budget: Fish Speech(2GB) + Flux(8GB) or HunyuanVideo(14GB)
+- Monthly cost: ~$50 vs $5,522 with external APIs
+
+#### Configuration
+- `VOICECORE_ENABLED`, `VOICECORE_HOST`, `VOICECORE_PORT` env vars
+- VoiceCore section added to `config/index.ts`
+
+#### Testing
+- VoiceCoreTTSProvider unit tests (mocked fetch, error handling, config parsing)
+
 ## [0.2.0] - 2026-03-30
 
 ### VisualCore Integration

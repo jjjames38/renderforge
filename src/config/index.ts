@@ -62,6 +62,11 @@ export const config = {
     enableStepDistill: process.env.HUNYUAN_STEP_DISTILL !== 'false',
     cpuOffload: process.env.HUNYUAN_CPU_OFFLOAD !== 'false',
   },
+  voicecore: {
+    host: process.env.VOICECORE_HOST ?? 'localhost',
+    port: parseInt(process.env.VOICECORE_PORT ?? '8080', 10),
+    enabled: process.env.VOICECORE_ENABLED === 'true',
+  },
   qc: {
     enabled: process.env.QC_ENABLED === 'true',
     clipThreshold: parseFloat(process.env.QC_CLIP_THRESHOLD ?? '0.25'),

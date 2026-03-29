@@ -9,7 +9,7 @@
 
 export interface GenerateRequest {
   /** Generation type */
-  type: 'text-to-image' | 'image-to-video' | 'upscale';
+  type: 'text-to-image' | 'image-to-video' | 'upscale' | 'tts';
 
   /** Text prompt describing the desired output */
   prompt: string;
@@ -83,9 +83,9 @@ export interface GenerateOutput {
   url: string;
   width: number;
   height: number;
-  /** Duration in seconds (video only) */
+  /** Duration in seconds (video/audio only) */
   duration?: number;
-  format: 'png' | 'jpg' | 'mp4' | 'gif';
+  format: 'png' | 'jpg' | 'mp4' | 'gif' | 'wav';
 }
 
 export type GenerateStatus = 'queued' | 'processing' | 'done' | 'failed';
@@ -98,7 +98,8 @@ export type ProviderName =
   | 'hunyuan-local'
   | 'seedance-remote'
   | 'realesrgan'
-  | 'seedream-remote';
+  | 'seedream-remote'
+  | 'voicecore-tts';
 
 export interface GenerateProvider {
   /** Provider identifier */
@@ -187,6 +188,11 @@ export interface VisualCoreConfig {
     vram_total_gb: number;
   };
   lora_presets: Record<string, string>;
+  voicecore?: {
+    host: string;
+    port: number;
+    enabled: boolean;
+  };
 }
 
 // ─── Resolution Helpers ───

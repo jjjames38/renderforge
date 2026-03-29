@@ -124,6 +124,11 @@ export async function createServer(opts?: { testing?: boolean }) {
           vram_total_gb: Math.round(config.gpu.vramBudget / 1024),
         },
         lora_presets: {},
+        voicecore: {
+          host: config.voicecore.host,
+          port: config.voicecore.port,
+          enabled: config.voicecore.enabled,
+        },
       };
 
       providerRouter = new ProviderRouter(visualCoreConfig, gpuManager);

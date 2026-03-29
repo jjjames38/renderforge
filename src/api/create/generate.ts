@@ -6,7 +6,7 @@ import type { AIGenerateRequest } from '../../render/assets/ai.js';
 
 export interface GenerationRecord {
   id: string;
-  type: 'text-to-image' | 'image-to-video' | 'upscale';
+  type: 'text-to-image' | 'image-to-video' | 'upscale' | 'tts';
   status: 'queued' | 'processing' | 'done' | 'failed';
   prompt?: string;
   priority?: 'normal' | 'high';
@@ -16,7 +16,7 @@ export interface GenerationRecord {
   height?: number;
   duration?: number;
   resultUrl?: string;
-  resultType?: 'image' | 'video';
+  resultType?: 'image' | 'video' | 'audio';
   error?: string;
   createdAt: string;
   updatedAt: string;
@@ -35,6 +35,9 @@ function getProviderConfig(type: string): any | null {
   if (type === 'image-to-video') {
     return createConfig['image-to-video'] ?? createConfig.imageToVideo ?? null;
   }
+  if (type === 'tts') {
+    return createConfig['tts'] ?? createConfig.tts ?? null;
+  }
   return null;
 }
 
@@ -43,10 +46,10 @@ export async function createRoutes(app: FastifyInstance) {
     const body = req.body as AIGenerateRequest;
     const { type } = body;
 
-    if (!type || !['text-to-image', 'image-to-video', 'upscale'].includes(type)) {
+    if (!type || !['text-to-image', 'image-to-video', 'upscale', 'tts'].includes(type)) {
       return reply.status(400).send({
         success: false,
-        message: 'Invalid type. Must be "text-to-image", "image-to-video", or "upscale"',
+        message: 'Invalid type. Must be "text-to-image", "image-to-video", "upscale", or "tts"',
         status: 400,
       });
     }
