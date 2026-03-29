@@ -45,9 +45,11 @@ export function renderText(layer: IRLayer, layerIndex: number): RenderedElement 
   const fontWeight = font.weight ?? 400;
   const textAlign = alignment?.horizontal ?? 'center';
 
-  // Determine vertical position from asset alignment, using offsetY for precise positioning
+  // Determine vertical position: use clip-level position (top/center/bottom) first, then alignment
+  const clipPosition = layer.asset.clipPosition as string | undefined;
+  const vertPosition = clipPosition ?? alignment?.vertical ?? 'center';
   const offsetY = layer.position.offsetY;
-  const verticalPos = mapVerticalPosition(alignment?.vertical, offsetY !== 0 ? offsetY : undefined);
+  const verticalPos = mapVerticalPosition(vertPosition, offsetY !== 0 ? offsetY : undefined);
   const strokeCss = buildStroke(stroke);
 
   // Offsets from position (only horizontal — vertical is handled by mapVerticalPosition)

@@ -112,8 +112,6 @@ window.updateFrame = function(time) {
       var transTime = time - lt.start;
       if (transTime < lt.transitionInDuration) {
         var p = transTime / lt.transitionInDuration;
-        // ease-in-out
-        p = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
         opacity = Math.min(opacity, p);
       }
     }
@@ -123,8 +121,6 @@ window.updateFrame = function(time) {
       var timeLeft = (lt.start + lt.duration) - time;
       if (timeLeft < lt.transitionOutDuration) {
         var p = timeLeft / lt.transitionOutDuration;
-        // ease-in-out
-        p = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
         opacity = Math.min(opacity, p);
       }
     }
@@ -137,16 +133,12 @@ window.updateFrame = function(time) {
       var effectDuration = lt.duration;
       // Map effect to speed duration
       var base = lt.effect;
-      var speed = 5; // normal
-      if (base.endsWith('Fast')) { base = base.slice(0, -4); speed = 3; }
-      else if (base.endsWith('Slow')) { base = base.slice(0, -4); speed = 8; }
-      effectDuration = Math.min(speed, lt.duration);
+      if (base.endsWith('Fast')) { base = base.slice(0, -4); }
+      else if (base.endsWith('Slow')) { base = base.slice(0, -4); }
+      // Use full layer duration for constant slow movement
 
       var progress = Math.min(1, Math.max(0, localTime / effectDuration));
-      // Ease in-out (cubic)
-      progress = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      // Linear interpolation for constant speed throughout
 
       var transform = '';
       switch (base) {

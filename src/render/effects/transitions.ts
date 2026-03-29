@@ -83,9 +83,9 @@ const TRANSITION_DEFS: Record<string, TransitionDef> = {
   },
 };
 
-const DURATION_NORMAL = 1;
-const DURATION_FAST = 0.5;
-const DURATION_SLOW = 2;
+const DURATION_NORMAL = 0.5;
+const DURATION_FAST = 0.25;
+const DURATION_SLOW = 1;
 
 function propsToString(props: Record<string, string>): string {
   return Object.entries(props).map(([k, v]) => `${k}: ${v};`).join(' ');

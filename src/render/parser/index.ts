@@ -113,6 +113,10 @@ function parseTracks(tracks: ShotstackEdit['timeline']['tracks']): ParsedTracks 
       prevEnd = timing.start + timing.duration;
 
       const asset = extractAsset(clip.asset);
+      // Pass Shotstack clip-level position string (top/center/bottom) to asset for text rendering
+      if (clip.position && typeof clip.position === 'string') {
+        asset.clipPosition = clip.position;
+      }
       const irTiming = extractTiming(timing.start, timing.duration, clip);
       const effects = extractEffects(clip);
       const position = extractPosition(clip);
