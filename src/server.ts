@@ -18,6 +18,7 @@ import { createQueues } from './queue/queues.js';
 import { batchRoutes } from './api/extended/batch.js';
 import { previewRoutes } from './api/extended/preview.js';
 import { queueStatusRoutes } from './api/extended/queue-status.js';
+import { ecosystemRoutes } from './api/extended/ecosystem.js';
 import { metricsRoutes } from './api/metrics.js';
 import { config } from './config/index.js';
 import type { Worker } from 'bullmq';
@@ -66,6 +67,7 @@ export async function createServer(opts?: { testing?: boolean }) {
   await app.register(batchRoutes);
   await app.register(previewRoutes);
   await app.register(queueStatusRoutes);
+  await app.register(ecosystemRoutes);
   await app.register(metricsRoutes);
 
   // Start render worker and queues (skip in test mode)

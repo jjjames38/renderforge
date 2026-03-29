@@ -73,4 +73,17 @@ export const config = {
     aestheticThreshold: parseFloat(process.env.QC_AESTHETIC_THRESHOLD ?? '5.0'),
     nsfwThreshold: parseFloat(process.env.QC_NSFW_THRESHOLD ?? '0.3'),
   },
+  profilecore: {
+    enabled: process.env.PROFILECORE_ENABLED === 'true',
+    host: process.env.PROFILECORE_HOST ?? 'localhost',
+    port: parseInt(process.env.PROFILECORE_PORT ?? '3001', 10),
+    mode: (process.env.PROFILECORE_MODE ?? 'http') as 'http' | 'cli',
+    cliPath: process.env.PROFILECORE_CLI_PATH,
+  },
+  cubeinsight: {
+    enabled: process.env.CUBEINSIGHT_ENABLED === 'true',
+    host: process.env.CUBEINSIGHT_HOST ?? 'localhost',
+    port: parseInt(process.env.CUBEINSIGHT_PORT ?? '8000', 10),
+    apiKey: process.env.CUBEINSIGHT_API_KEY,
+  },
 } as const;

@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.4.0] - 2026-03-29
+
+### Ecosystem Integration — ProfileCore + CubeInsight
+
+Connect all 5 projects in the YouTube 270-channel automation ecosystem.
+Both services are disabled by default (opt-in via environment variables).
+
+#### Features
+- **ProfileCore Provider** — Anti-detect browser automation for YouTube upload
+  - Launch/close browser profiles via HTTP API or CLI
+  - Profile health checks and listing by tier
+  - Playwright-backed headless browser sessions
+- **CubeInsight Provider** — B2B trend analysis and sentiment data
+  - Trending topics by tier and region
+  - Video sentiment analysis
+  - Channel search
+- **Ecosystem API** — New extended endpoints under `/x/v1/`
+  - `POST /x/v1/profiles/launch` — Launch a browser profile
+  - `POST /x/v1/profiles/close` — Close a profile
+  - `GET /x/v1/profiles/health` — Profile/proxy health
+  - `GET /x/v1/profiles/list` — List profiles by tier
+  - `GET /x/v1/trends/topics` — Trending topics from CubeInsight
+  - `GET /x/v1/trends/sentiment` — Video sentiment analysis
+  - `GET /x/v1/trends/channels` — Channel search
+
+#### RunPod Unified Deployment
+- ProfileCore and CubeInsight services added to `docker-compose.runpod.yml`
+- `docker/profilecore/Dockerfile` — Node.js 20 + Playwright + SQLite
+- `docker/cubeinsight/Dockerfile` — Python 3.11 + FastAPI
+
+#### Configuration
+- `PROFILECORE_ENABLED`, `PROFILECORE_HOST`, `PROFILECORE_PORT`, `PROFILECORE_MODE` env vars
+- `CUBEINSIGHT_ENABLED`, `CUBEINSIGHT_HOST`, `CUBEINSIGHT_PORT`, `CUBEINSIGHT_API_KEY` env vars
+
+#### Testing
+- ProfileCoreProvider unit tests (launch, close, health, list with mocked fetch)
+- CubeInsightProvider unit tests (trending, sentiment, search with mocked fetch)
+- Config parsing tests for profilecore and cubeinsight sections
+
 ## [0.3.0] - 2026-03-29
 
 ### VoiceCore TTS Integration

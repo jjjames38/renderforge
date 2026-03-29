@@ -30,6 +30,13 @@ services:
       - REDIS_URL=redis://redis:6379
       - CHROMIUM_WS=ws://chromium:3000
       - STORAGE_PATH=/data/assets
+      - PROFILECORE_ENABLED=true
+      - PROFILECORE_HOST=profilecore
+      - PROFILECORE_PORT=3001
+      - CUBEINSIGHT_ENABLED=true
+      - CUBEINSIGHT_HOST=cubeinsight
+      - CUBEINSIGHT_PORT=8000
+      - CUBEINSIGHT_API_KEY=${CUBEINSIGHT_API_KEY:-}
     volumes:
       - assets:/data/assets
 
@@ -82,9 +89,26 @@ services:
     volumes:
       - hunyuan-models:/workspace/models
 
+  profilecore:
+    build: docker/profilecore
+    ports: ["3001:3001"]
+    volumes:
+      - profiles:/app/data
+    environment:
+      - PORT=3001
+
+  cubeinsight:
+    build: docker/cubeinsight
+    ports: ["8000:8000"]
+    environment:
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_KEY=${SUPABASE_KEY:-}
+
 volumes:
   assets:
   models:
   references:
   comfyui-models:
   hunyuan-models:
+  profiles:

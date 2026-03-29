@@ -213,6 +213,24 @@ Compatible pairs: Fish Speech + Flux (10GB), Fish Speech + Hunyuan (16GB with CP
 
 **Cost:** ~$50/month (RunPod RTX 4090) vs $5,522/month with external APIs.
 
+## Ecosystem — 5 Projects Connected
+
+RenderForge connects all 5 projects in the YouTube 270-channel automation pipeline:
+
+| Project | Role | Integration |
+|---------|------|-------------|
+| **RenderForge** | Video render engine | Core |
+| **VisualCore** | GPU inference (Flux, Hunyuan, ESRGAN) | Create API providers |
+| **VoiceCore** | TTS (Fish Speech) | Create API provider |
+| **ProfileCore** | Anti-detect browser automation | `/x/v1/profiles/*` |
+| **CubeInsight** | Trend analysis and sentiment | `/x/v1/trends/*` |
+
+ProfileCore and CubeInsight are disabled by default. Enable via:
+```bash
+PROFILECORE_ENABLED=true
+CUBEINSIGHT_ENABLED=true
+```
+
 ## n8n Integration (Shotstack Migration)
 
 RenderForge is a **drop-in replacement** for Shotstack in n8n workflows. To migrate:
@@ -312,6 +330,13 @@ cd renderforge && pnpm dev
 | POST | `/render/preview` | Quick low-res preview |
 | GET | `/queue/status` | Queue dashboard |
 | GET | `/metrics` | Prometheus metrics |
+| POST | `/profiles/launch` | Launch a ProfileCore browser profile |
+| POST | `/profiles/close` | Close a browser profile |
+| GET | `/profiles/health` | Profile/proxy health check |
+| GET | `/profiles/list` | List profiles by tier |
+| GET | `/trends/topics` | Trending topics (CubeInsight) |
+| GET | `/trends/sentiment` | Video sentiment analysis |
+| GET | `/trends/channels` | Channel search |
 
 ## Configuration
 
