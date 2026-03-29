@@ -10,6 +10,7 @@ import { sourcesRoutes } from './api/ingest/sources.js';
 import { uploadRoutes } from './api/ingest/upload.js';
 import { assetsRoutes } from './api/serve/assets.js';
 import { createRoutes } from './api/create/generate.js';
+import { inspectRoutes } from './api/edit/inspect.js';
 import { createRenderWorker } from './queue/workers/render-worker.js';
 import { createIngestWorker } from './queue/workers/ingest-worker.js';
 import { createCreateWorker } from './queue/workers/create-worker.js';
@@ -59,6 +60,7 @@ export async function createServer(opts?: { testing?: boolean }) {
   await app.register(uploadRoutes);
   await app.register(assetsRoutes);
   await app.register(createRoutes);
+  await app.register(inspectRoutes);
 
   // Register extended API routes
   await app.register(batchRoutes);
