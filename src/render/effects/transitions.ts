@@ -57,6 +57,30 @@ const TRANSITION_DEFS: Record<string, TransitionDef> = {
     from: { transform: 'scale(0)' },
     to: { transform: 'scale(1)' },
   },
+  carouselLeft: {
+    from: { transform: 'translateX(100%)', opacity: '0' },
+    to: { transform: 'translateX(0)', opacity: '1' },
+  },
+  carouselRight: {
+    from: { transform: 'translateX(-100%)', opacity: '0' },
+    to: { transform: 'translateX(0)', opacity: '1' },
+  },
+  carouselUp: {
+    from: { transform: 'translateY(100%)', opacity: '0' },
+    to: { transform: 'translateY(0)', opacity: '1' },
+  },
+  carouselDown: {
+    from: { transform: 'translateY(-100%)', opacity: '0' },
+    to: { transform: 'translateY(0)', opacity: '1' },
+  },
+  shuffleLeft: {
+    from: { transform: 'translateX(100%) rotate(5deg)', opacity: '0' },
+    to: { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
+  },
+  shuffleRight: {
+    from: { transform: 'translateX(-100%) rotate(-5deg)', opacity: '0' },
+    to: { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
+  },
 };
 
 const DURATION_NORMAL = 1;
