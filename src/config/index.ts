@@ -43,6 +43,7 @@ export const config = {
   auth: {
     enabled: process.env.AUTH_ENABLED === 'true',
     apiKeys: (process.env.API_KEYS ?? '').split(',').filter(Boolean),
+    jwtSecret: process.env.JWT_SECRET ?? '',
   },
   create: file.create ?? {},
 } as const;
