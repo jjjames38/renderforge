@@ -151,7 +151,7 @@ describe('captureFrames', () => {
     // No CDP session should be created (no animation playback rate control)
   });
 
-  it('sets page content with waitUntil networkidle0', async () => {
+  it('sets page content with waitUntil networkidle0 on first load', async () => {
     const { captureFrames } = await import(
       '../../../src/render/capture/index.js'
     );
@@ -167,7 +167,7 @@ describe('captureFrames', () => {
 
     expect(mockPage.setContent).toHaveBeenCalledWith(
       '<html><body>Test</body></html>',
-      { waitUntil: 'networkidle0' },
+      { waitUntil: 'networkidle0', timeout: 30000 },
     );
   });
 
