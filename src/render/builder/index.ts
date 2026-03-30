@@ -98,6 +98,13 @@ window.updateFrame = function(time) {
 
     var visible = time >= lt.start && time < lt.start + lt.duration;
 
+    // Crossfade: extend visibility by transitionIn duration BEFORE the layer starts
+    // so the incoming layer overlaps with the outgoing layer
+    var earlyStart = lt.transitionIn ? lt.transitionInDuration : 0;
+    var visibleStart = lt.start - earlyStart;
+    var visibleEnd = lt.start + lt.duration;
+    var visible = time >= visibleStart && time < visibleEnd;
+
     if (!visible) {
       el.style.opacity = '0';
       el.style.transform = el.dataset.baseTransform || '';
@@ -107,9 +114,9 @@ window.updateFrame = function(time) {
     // Start with full opacity
     var opacity = 1;
 
-    // Transition in: fade from 0 to 1 at the start of the layer
+    // Transition in: fade from 0 to 1 (includes early overlap period)
     if (lt.transitionIn && lt.transitionInDuration > 0) {
-      var transTime = time - lt.start;
+      var transTime = time - visibleStart;
       if (transTime < lt.transitionInDuration) {
         var p = transTime / lt.transitionInDuration;
         opacity = Math.min(opacity, p);
@@ -118,14 +125,14 @@ window.updateFrame = function(time) {
 
     // Transition out: fade from 1 to 0 at the end of the layer
     if (lt.transitionOut && lt.transitionOutDuration > 0) {
-      var timeLeft = (lt.start + lt.duration) - time;
+      var timeLeft = visibleEnd - time;
       if (timeLeft < lt.transitionOutDuration) {
         var p = timeLeft / lt.transitionOutDuration;
         opacity = Math.min(opacity, p);
       }
     }
 
-    el.style.opacity = String(opacity);
+    el.style.opacity = String(Math.max(0, Math.min(1, opacity)));
 
     // KenBurns transform
     if (lt.effect) {

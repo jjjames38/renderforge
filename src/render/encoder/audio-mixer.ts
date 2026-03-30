@@ -6,12 +6,24 @@ export interface AudioMixResult {
   mapArgs: string[];
 }
 
+/**
+ * Build FFmpeg audio mixing filter.
+ *
+ * Strategy: Instead of amix (which normalizes volume unpredictably),
+ * we pad each audio clip with silence to fill the entire timeline,
+ * then overlay them using amerge + pan downmix.
+ *
+ * For simplicity and reliability, we use a 2-stage approach:
+ * 1. Each clip: apply volume/effects → adelay to position → apad to full duration
+ * 2. Mix all padded streams by summing (no normalization)
+ */
 export function buildAudioMix(audio: IRAudioMix, totalDuration: number): AudioMixResult {
   const inputArgs: string[] = [];
   const filters: string[] = [];
   let inputIdx = 1; // 0 is video
+  const paddedStreams: string[] = [];
 
-  // Process audio clips
+  // Process audio clips (TTS narration etc.)
   for (const clip of audio.clips) {
     inputArgs.push('-i', clip.src);
     const parts: string[] = [];
@@ -25,10 +37,10 @@ export function buildAudioMix(audio: IRAudioMix, totalDuration: number): AudioMi
     if (clip.volumeEffect === 'fadeIn') {
       parts.push(`afade=t=in:d=1`);
     } else if (clip.volumeEffect === 'fadeOut') {
-      parts.push(`afade=t=out:st=${clip.duration - 1}:d=1`);
+      parts.push(`afade=t=out:st=${Math.max(0, clip.duration - 1)}:d=1`);
     } else if (clip.volumeEffect === 'fadeInFadeOut') {
       parts.push(`afade=t=in:d=1`);
-      parts.push(`afade=t=out:st=${clip.duration - 1}:d=1`);
+      parts.push(`afade=t=out:st=${Math.max(0, clip.duration - 1)}:d=1`);
     }
 
     // Speed
@@ -36,18 +48,23 @@ export function buildAudioMix(audio: IRAudioMix, totalDuration: number): AudioMi
       parts.push(`atempo=${clip.speed}`);
     }
 
-    // Delay to position on timeline
+    // Delay to position on timeline (milliseconds)
     const delayMs = Math.round(clip.start * 1000);
     if (delayMs > 0) {
       parts.push(`adelay=${delayMs}|${delayMs}`);
     }
 
-    const chain = parts.length > 0 ? parts.join(',') : 'anull';
-    filters.push(`[${inputIdx}:a]${chain}[a${inputIdx}]`);
+    // Pad with silence to full timeline duration so all streams are same length
+    parts.push(`apad=whole_dur=${totalDuration}`);
+
+    const chain = parts.join(',');
+    const label = `a${inputIdx}`;
+    filters.push(`[${inputIdx}:a]${chain}[${label}]`);
+    paddedStreams.push(`[${label}]`);
     inputIdx++;
   }
 
-  // Process soundtrack
+  // Process soundtrack (BGM)
   if (audio.soundtrack) {
     inputArgs.push('-i', audio.soundtrack.src);
     const parts: string[] = [];
@@ -56,24 +73,39 @@ export function buildAudioMix(audio: IRAudioMix, totalDuration: number): AudioMi
     if (audio.soundtrack.effect === 'fadeIn') {
       parts.push(`afade=t=in:d=2`);
     } else if (audio.soundtrack.effect === 'fadeOut') {
-      parts.push(`afade=t=out:st=${totalDuration - 2}:d=2`);
+      parts.push(`afade=t=out:st=${Math.max(0, totalDuration - 2)}:d=2`);
     } else if (audio.soundtrack.effect === 'fadeInFadeOut') {
       parts.push(`afade=t=in:d=2`);
-      parts.push(`afade=t=out:st=${totalDuration - 2}:d=2`);
+      parts.push(`afade=t=out:st=${Math.max(0, totalDuration - 2)}:d=2`);
     }
 
-    filters.push(`[${inputIdx}:a]${parts.join(',')}[a${inputIdx}]`);
+    // Trim/pad to match total duration
+    parts.push(`atrim=0:${totalDuration}`);
+    parts.push(`apad=whole_dur=${totalDuration}`);
+
+    const label = `a${inputIdx}`;
+    filters.push(`[${inputIdx}:a]${parts.join(',')}[${label}]`);
+    paddedStreams.push(`[${label}]`);
     inputIdx++;
   }
 
-  // Mix all audio streams
-  const streamCount = inputIdx - 1;
+  // Mix all padded streams
+  const streamCount = paddedStreams.length;
   if (streamCount === 0) {
     return { inputArgs: [], filterComplex: '', mapArgs: [] };
   }
 
-  const mixInputs = Array.from({ length: streamCount }, (_, i) => `[a${i + 1}]`).join('');
-  filters.push(`${mixInputs}amix=inputs=${streamCount}:duration=longest:normalize=0[aout]`);
+  if (streamCount === 1) {
+    // Single stream — no mixing needed, just use it directly
+    // Replace last label with [aout]
+    const lastFilter = filters[filters.length - 1];
+    filters[filters.length - 1] = lastFilter.replace(/\[a\d+\]$/, '[aout]');
+  } else {
+    // Multiple streams: use amix with normalize=0 and dropout_transition=0
+    // All streams are padded to same length, so no volume drift
+    const mixInputs = paddedStreams.join('');
+    filters.push(`${mixInputs}amix=inputs=${streamCount}:duration=first:dropout_transition=0:normalize=0[aout]`);
+  }
 
   return {
     inputArgs,
