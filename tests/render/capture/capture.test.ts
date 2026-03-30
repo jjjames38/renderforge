@@ -108,8 +108,8 @@ describe('captureFrames', () => {
       path: '/tmp/static-frames/frame_00001.png',
       type: 'png',
     });
-    // Should call evaluate twice: once for loadContent image wait, once for updateFrame at time 0
-    expect(mockPage.evaluate).toHaveBeenCalledTimes(2);
+    // Should call evaluate once for updateFrame at time 0 (loadContent no longer calls evaluate)
+    expect(mockPage.evaluate).toHaveBeenCalledTimes(1);
   });
 
   it('animated capture with duration=2 fps=25 calls screenshot 50 times', async () => {
@@ -130,8 +130,8 @@ describe('captureFrames', () => {
     expect(result.frameDir).toBe('/tmp/anim-frames');
     expect(result.framePattern).toBe('frame_%05d.png');
     expect(mockPage.screenshot).toHaveBeenCalledTimes(50);
-    // Should call evaluate 51 times: 1 (loadContent image wait) + 50 (updateFrame for each frame)
-    expect(mockPage.evaluate).toHaveBeenCalledTimes(51);
+    // Should call evaluate 50 times: 50 (updateFrame for each frame)
+    expect(mockPage.evaluate).toHaveBeenCalledTimes(50);
   });
 
   it('animated capture calls page.evaluate for each frame (no CDP animation control)', async () => {
@@ -148,8 +148,8 @@ describe('captureFrames', () => {
       isStatic: false,
     });
 
-    // 10fps * 0.5s = 5 frames, so 1 (loadContent image wait) + 5 (updateFrame) = 6 evaluate calls total
-    expect(mockPage.evaluate).toHaveBeenCalledTimes(6);
+    // 10fps * 0.5s = 5 frames = 5 evaluate calls (updateFrame only)
+    expect(mockPage.evaluate).toHaveBeenCalledTimes(5);
     // No CDP session should be created (no animation playback rate control)
   });
 
@@ -167,9 +167,10 @@ describe('captureFrames', () => {
       isStatic: true,
     });
 
+    // First load uses networkidle2 with 60s timeout
     expect(mockPage.setContent).toHaveBeenCalledWith(
       '<html><body>Test</body></html>',
-      { waitUntil: 'domcontentloaded', timeout: 15000 },
+      { waitUntil: 'networkidle2', timeout: 60000 },
     );
   });
 
