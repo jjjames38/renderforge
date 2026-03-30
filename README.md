@@ -445,14 +445,14 @@ docs/
 ## Roadmap & TODO
 
 ### Immediate (Next)
-- [ ] n8n에서 테스트 에피소드 1개 RenderForge로 실행 → Shotstack 결과물과 품질 비교
-- [ ] 기존 8개 실패 테스트 수정 → 331개 전부 통과
-- [ ] 9:16 Shorts 렌더링 테스트 (1080x1920)
-- [ ] 풀 에피소드 렌더링 (10분+, 18장면) 안정성 테스트
+- [x] n8n에서 테스트 에피소드 1개 RenderForge로 실행 → Shotstack 결과물과 품질 비교
+- [x] 기존 8개 실패 테스트 수정 → 331개 전부 통과
+- [x] 9:16 Shorts 렌더링 테스트 (1080x1920)
+- [ ] 풀 에피소드 렌더링 (10분+) 안정성 테스트 — Chromium 메모리 최적화 필요
 
 ### Near-term
 - [ ] RunPod RTX 4090 배포 (VoiceCore + VisualCore 연동)
-- [ ] Chromium 메모리/타임아웃 최적화 (장시간 렌더링)
+- [ ] Chromium 메모리/타임아웃 최적화 (2654프레임에서 Target closed 크래시)
 - [ ] n8n 워크플로우 전체 270채널 전환
 - [ ] ElevenLabs → VoiceCore(Fish Speech) 전환
 
