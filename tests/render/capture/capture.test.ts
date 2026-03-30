@@ -18,6 +18,7 @@ const mockPage = {
   setContent: vi.fn(),
   screenshot: vi.fn(),
   evaluate: vi.fn().mockResolvedValue(undefined),
+  waitForFunction: vi.fn().mockResolvedValue(undefined),
   close: vi.fn(),
 };
 
@@ -167,8 +168,10 @@ describe('captureFrames', () => {
       isStatic: true,
     });
 
-    // First load uses setContent (called via Promise.race)
-    expect(mockPage.setContent).toHaveBeenCalled();
+    expect(mockPage.setContent).toHaveBeenCalledWith(
+      '<html><body>Test</body></html>',
+      { waitUntil: 'domcontentloaded', timeout: 30000 },
+    );
   });
 
   it('releases page even if screenshot throws', async () => {
