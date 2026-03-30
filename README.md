@@ -457,14 +457,14 @@ docs/
 - [x] gstack-ecosystem-os 표준 반영 (snake_case, shared types)
 
 ### Immediate (Next)
-- [ ] n8n 워크플로우 실제 에피소드 렌더링 (테스트 데이터가 아닌 실제 n8n 파이프라인)
-- [ ] 자막 35자 단위 분할 적용 (현재 전체 문장 표시 → 화면 초과)
-- [ ] 10분+ 실제 에피소드 렌더링 테스트 (18장면, 실제 에셋)
+- [ ] n8n 워크플로우 실제 에피소드 렌더링 (실제 n8n 파이프라인 실행 → 10분+ 풀 에피소드)
+- [ ] 자막 35자 단위 분할 n8n 노드 검증 (n8n 워크플로우가 이미 분할 처리, RenderForge 측 추가 작업 불필요 확인)
 
 ### Near-term
 - [ ] RunPod RTX 4090 배포 (VoiceCore + VisualCore 연동)
 - [ ] n8n 워크플로우 전체 270채널 전환
 - [ ] ElevenLabs → VoiceCore(Fish Speech) 전환
+- [ ] 렌더링 속도 최적화 (현재 3.4분 영상 = ~20분 렌더 → 목표 5분 이내)
 
 ### Medium-term
 - [ ] CubeInsight → RenderForge 트렌드 데이터 피드백 루프
