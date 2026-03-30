@@ -6,7 +6,7 @@
 export interface CubeInsightConfig {
   host: string;
   port: number;
-  apiKey?: string;
+  api_key?: string;
 }
 
 export class CubeInsightProvider {
@@ -20,7 +20,7 @@ export class CubeInsightProvider {
 
   private get headers(): Record<string, string> {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (this.config.apiKey) h['X-API-KEY'] = this.config.apiKey;
+    if (this.config.api_key) h['X-API-KEY'] = this.config.api_key;
     return h;
   }
 
@@ -43,9 +43,9 @@ export class CubeInsightProvider {
   }
 
   /** Analyze video sentiment */
-  async analyzeVideo(videoId: string): Promise<any> {
+  async analyzeVideo(video_id: string): Promise<any> {
     const res = await fetch(
-      `${this.baseUrl}/api/analyze_video?video_id=${encodeURIComponent(videoId)}`,
+      `${this.baseUrl}/api/analyze_video?video_id=${encodeURIComponent(video_id)}`,
       { headers: this.headers },
     );
     if (!res.ok) throw new Error(`CubeInsight analysis error: ${res.statusText}`);

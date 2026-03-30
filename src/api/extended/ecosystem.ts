@@ -30,7 +30,7 @@ export async function ecosystemRoutes(app: FastifyInstance) {
     ? new CubeInsightProvider({
         host: config.cubeinsight.host,
         port: config.cubeinsight.port,
-        apiKey: config.cubeinsight.apiKey,
+        api_key: config.cubeinsight.api_key,
       })
     : null;
 

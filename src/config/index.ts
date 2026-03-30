@@ -85,6 +85,6 @@ export const config = {
     enabled: process.env.CUBEINSIGHT_ENABLED === 'true',
     host: process.env.CUBEINSIGHT_HOST ?? 'localhost',
     port: parseInt(process.env.CUBEINSIGHT_PORT ?? '8000', 10),
-    apiKey: process.env.CUBEINSIGHT_API_KEY,
+    api_key: process.env.CUBEINSIGHT_API_KEY,
   },
 } as const;
