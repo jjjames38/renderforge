@@ -21,24 +21,22 @@ export interface CaptureResult {
 // Recycle the Puppeteer page every N frames to prevent Chromium OOM.
 const PAGE_RECYCLE_INTERVAL = 1000;
 
-// Load HTML content into page with image preloading and timeout
-async function loadContent(page: any, html: string, isFirst: boolean): Promise<void> {
-  if (isFirst) {
-    // First load: wait for all images via networkidle0 (max 30s)
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
-  } else {
-    // Recycle: use domcontentloaded (fast) + explicit image wait
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
-    // Wait for images already cached by browser (max 5s)
-    await page.evaluate(() => {
-      return Promise.all(
+// Load HTML content into page with explicit image wait (no networkidle0)
+async function loadContent(page: any, html: string): Promise<void> {
+  // Always use domcontentloaded (fast) — networkidle0 hangs on slow external images
+  await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  // Wait for all images to load (max 10s per image, 30s total)
+  await page.evaluate(() => {
+    return Promise.race([
+      Promise.all(
         Array.from(document.images).map((img: HTMLImageElement) =>
           img.complete ? Promise.resolve() :
-          new Promise(r => { img.onload = r; img.onerror = r; setTimeout(r, 3000); })
+          new Promise(r => { img.onload = r; img.onerror = r; setTimeout(r, 10000); })
         )
-      );
-    }).catch(() => {}); // ignore timeout
-  }
+      ),
+      new Promise(r => setTimeout(r, 30000)) // total timeout
+    ]);
+  }).catch(() => {}); // proceed even if some images fail
 }
 
 export async function captureFrames(opts: CaptureOptions): Promise<CaptureResult> {
@@ -47,7 +45,7 @@ export async function captureFrames(opts: CaptureOptions): Promise<CaptureResult
   if (opts.isStatic) {
     const page = await acquirePage(opts.width, opts.height);
     try {
-      await loadContent(page, opts.html, true);
+      await loadContent(page, opts.html);
       await page.evaluate((time: number) => {
         if (typeof (window as any).updateFrame === 'function') {
           (window as any).updateFrame(time);
@@ -68,14 +66,14 @@ export async function captureFrames(opts: CaptureOptions): Promise<CaptureResult
   let pageFrameCount = 0;
 
   try {
-    await loadContent(page, opts.html, true);
+    await loadContent(page, opts.html);
 
     for (let i = 0; i < totalFrames; i++) {
       // Recycle page every N frames to prevent Chromium memory buildup
       if (pageFrameCount >= PAGE_RECYCLE_INTERVAL) {
         await releasePage(page);
         page = await acquirePage(opts.width, opts.height);
-        await loadContent(page, opts.html, false);
+        await loadContent(page, opts.html);
         pageFrameCount = 0;
       }
 

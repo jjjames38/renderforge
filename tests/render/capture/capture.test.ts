@@ -17,7 +17,7 @@ const mockPage = {
   setViewport: vi.fn(),
   setContent: vi.fn(),
   screenshot: vi.fn(),
-  evaluate: vi.fn(),
+  evaluate: vi.fn().mockResolvedValue(undefined),
   close: vi.fn(),
 };
 
@@ -108,8 +108,8 @@ describe('captureFrames', () => {
       path: '/tmp/static-frames/frame_00001.png',
       type: 'png',
     });
-    // Should call evaluate once for static (to show layers at time 0)
-    expect(mockPage.evaluate).toHaveBeenCalledTimes(1);
+    // Should call evaluate twice: once for loadContent image wait, once for updateFrame at time 0
+    expect(mockPage.evaluate).toHaveBeenCalledTimes(2);
   });
 
   it('animated capture with duration=2 fps=25 calls screenshot 50 times', async () => {
@@ -130,6 +130,8 @@ describe('captureFrames', () => {
     expect(result.frameDir).toBe('/tmp/anim-frames');
     expect(result.framePattern).toBe('frame_%05d.png');
     expect(mockPage.screenshot).toHaveBeenCalledTimes(50);
+    // Should call evaluate 51 times: 1 (loadContent image wait) + 50 (updateFrame for each frame)
+    expect(mockPage.evaluate).toHaveBeenCalledTimes(51);
   });
 
   it('animated capture calls page.evaluate for each frame (no CDP animation control)', async () => {
@@ -146,12 +148,12 @@ describe('captureFrames', () => {
       isStatic: false,
     });
 
-    // 10fps * 0.5s = 5 frames, so 5 evaluate calls to update frame time
-    expect(mockPage.evaluate).toHaveBeenCalledTimes(5);
+    // 10fps * 0.5s = 5 frames, so 1 (loadContent image wait) + 5 (updateFrame) = 6 evaluate calls total
+    expect(mockPage.evaluate).toHaveBeenCalledTimes(6);
     // No CDP session should be created (no animation playback rate control)
   });
 
-  it('sets page content with waitUntil networkidle0 on first load', async () => {
+  it('sets page content with waitUntil domcontentloaded', async () => {
     const { captureFrames } = await import(
       '../../../src/render/capture/index.js'
     );
@@ -167,7 +169,7 @@ describe('captureFrames', () => {
 
     expect(mockPage.setContent).toHaveBeenCalledWith(
       '<html><body>Test</body></html>',
-      { waitUntil: 'networkidle0', timeout: 30000 },
+      { waitUntil: 'domcontentloaded', timeout: 15000 },
     );
   });
 
