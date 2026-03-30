@@ -23,8 +23,10 @@ import { metricsRoutes } from './api/metrics.js';
 import { config } from './config/index.js';
 import { getRedisConnection } from './queue/connection.js';
 import type { Worker } from 'bullmq';
+import { createHealthResponse, checkRedisDep } from '../../shared/health.js';
 
 export async function createServer(opts?: { testing?: boolean }) {
+  const startTime = Date.now();
   const app = Fastify({
     logger: opts?.testing ? false : {
       transport: { target: 'pino-pretty' },
@@ -45,6 +47,21 @@ export async function createServer(opts?: { testing?: boolean }) {
     version: '0.1.0',
     status: 'ok',
   }));
+
+  app.get('/health', async () => {
+    const deps: Record<string, 'healthy' | 'degraded' | 'offline'> = {};
+    try {
+      const { getRedisConnection } = await import('./queue/connection.js');
+      deps.redis = await checkRedisDep(getRedisConnection());
+    } catch {
+      deps.redis = 'offline';
+    }
+    if ((app as any).gpuManager) {
+      const mgr = (app as any).gpuManager;
+      deps.gpu = mgr.getStatus().is_swapping ? 'degraded' : 'healthy';
+    }
+    return createHealthResponse('renderforge', '0.1.0', startTime, deps);
+  });
 
   // Register static file serving for rendered assets
   const storagePath = resolve(config.storage.path);
