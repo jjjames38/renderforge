@@ -5,6 +5,14 @@ import type { IRAudioMix } from '../../../src/render/parser/types.js';
 // Mock child_process — vi.mock is hoisted, so use vi.fn() directly in factory
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
+  execFileSync: vi.fn().mockReturnValue(''),
+}));
+
+// Mock config
+vi.mock('../../../src/config/index.js', () => ({
+  config: {
+    encoder: { codec: 'libx264' },
+  },
 }));
 
 import { buildFFmpegArgs, encode } from '../../../src/render/encoder/index.js';
@@ -284,5 +292,93 @@ describe('encode', () => {
 
     const opts = makeOpts();
     await expect(encode(opts)).rejects.toThrow('spawn ENOENT');
+  });
+});
+
+// ============================================================
+// Hardware encoding (codec override)
+// ============================================================
+
+describe('buildFFmpegArgs with hardware codecs', () => {
+  it('uses h264_nvenc with -cq quality flag', () => {
+    const args = buildFFmpegArgs(makeOpts(), 'h264_nvenc');
+    expect(args).toContain('h264_nvenc');
+    expect(args).toContain('-cq');
+    expect(args).not.toContain('-crf');
+    expect(args).toContain('-preset');
+    expect(args[args.indexOf('-preset') + 1]).toBe('p4');
+  });
+
+  it('uses h264_videotoolbox with -q:v quality flag and no preset', () => {
+    const args = buildFFmpegArgs(makeOpts(), 'h264_videotoolbox');
+    expect(args).toContain('h264_videotoolbox');
+    expect(args).toContain('-q:v');
+    expect(args).not.toContain('-crf');
+    expect(args).not.toContain('-preset');
+  });
+
+  it('uses h264_qsv with -global_quality flag', () => {
+    const args = buildFFmpegArgs(makeOpts(), 'h264_qsv');
+    expect(args).toContain('h264_qsv');
+    expect(args).toContain('-global_quality');
+  });
+
+  it('nvenc maps quality levels correctly', () => {
+    const cases: Array<[string, string]> = [
+      ['verylow', '35'],
+      ['low', '28'],
+      ['medium', '23'],
+      ['high', '18'],
+      ['veryhigh', '15'],
+    ];
+    for (const [quality, expectedCq] of cases) {
+      const args = buildFFmpegArgs(
+        makeOpts({
+          output: { width: 1920, height: 1080, fps: 25, format: 'mp4', quality },
+        }),
+        'h264_nvenc',
+      );
+      const cqIdx = args.indexOf('-cq');
+      expect(args[cqIdx + 1]).toBe(expectedCq);
+    }
+  });
+
+  it('hardware codec works with audio mixing', () => {
+    const audio: IRAudioMix = {
+      clips: [{ src: '/audio/clip.mp3', start: 0, duration: 5, volume: 1 }],
+    };
+    const args = buildFFmpegArgs(
+      makeOpts({ audio }),
+      'h264_nvenc',
+    );
+    expect(args).toContain('h264_nvenc');
+    expect(args).toContain('-cq');
+    expect(args).toContain('-shortest');
+  });
+});
+
+describe('hwaccel detection', () => {
+  it('resolveCodec returns libx264 for explicit libx264', async () => {
+    const { resolveCodec } = await import('../../../src/render/encoder/hwaccel.js');
+    expect(resolveCodec('libx264')).toBe('libx264');
+  });
+
+  it('resolveCodec returns libx264 for unknown codec', async () => {
+    const { resolveCodec } = await import('../../../src/render/encoder/hwaccel.js');
+    expect(resolveCodec('invalid_codec')).toBe('libx264');
+  });
+
+  it('getQualityArgs returns correct flag for each codec', async () => {
+    const { getQualityArgs } = await import('../../../src/render/encoder/hwaccel.js');
+    expect(getQualityArgs('medium', 'libx264')[0]).toBe('-crf');
+    expect(getQualityArgs('medium', 'h264_nvenc')[0]).toBe('-cq');
+    expect(getQualityArgs('medium', 'h264_videotoolbox')[0]).toBe('-q:v');
+    expect(getQualityArgs('medium', 'h264_qsv')[0]).toBe('-global_quality');
+  });
+
+  it('getPresetArgs returns empty array for videotoolbox', async () => {
+    const { getPresetArgs } = await import('../../../src/render/encoder/hwaccel.js');
+    expect(getPresetArgs('h264_videotoolbox')).toEqual([]);
+    expect(getPresetArgs('h264_nvenc')).toEqual(['-preset', 'p4']);
   });
 });

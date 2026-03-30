@@ -90,6 +90,7 @@ export function createRenderWorker(db?: ReturnType<typeof getDb>) {
         { timeline: JSON.parse(timeline), output: JSON.parse(output), merge },
         workDir,
         updateStatus,
+        renderId,
       );
 
       // Update render record with result URL

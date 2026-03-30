@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.5.0] - 2026-03-31
+
+### Production Hardening — Reliability, Performance & Observability
+
+Five improvements to make RenderForge production-ready for 270-channel automation.
+
+#### Health Check Endpoint
+- `GET /health` — fast liveness probe for Docker/K8s
+- `GET /health?detail=1` — full dependency check (Redis, Chromium, FFmpeg, disk, GPU)
+- Status: `ok` / `degraded` / `error` with HTTP 200/503
+
+#### Frame Checkpoint & Resume
+- Checkpoint file saved every 100 frames during capture
+- Automatic resume from last checkpoint on Chromium crash or BullMQ retry
+- Validates `totalFrames` match before resuming (prevents stale checkpoint use)
+
+#### Asset Prefetch
+- Parallel download of external assets (images, video, audio, fonts) before rendering
+- URL hash-based caching — skip already-downloaded files
+- Replaces remote URLs with `file://` local paths — eliminates Puppeteer network wait
+
+#### Real-time Progress WebSocket
+- `ws://host/ws/progress/:renderId` — live capture progress
+- Throttled events (1% change or 500ms interval)
+- Stage events: `capture` (with frame/totalFrames), `done`, `failed`
+- EventEmitter-based hub — multiple clients can subscribe per render
+
+#### Hardware Encoding (NVENC / VideoToolbox / QSV)
+- Auto-detect available hardware encoders via `ffmpeg -encoders`
+- Priority: NVENC → VideoToolbox → QSV → libx264 (software fallback)
+- Quality mapping per codec (CRF → CQ/Q:V/global_quality)
+- `ENCODER_CODEC` env var for manual override (`auto` | `libx264` | `h264_nvenc` | etc.)
+- RunPod RTX 4090: 5-10x encoding speed improvement
+
+#### Testing
+- 363 tests across 28 test files (was 337 across 26)
+
 ## [0.4.0] - 2026-03-29
 
 ### Ecosystem Integration — ProfileCore + CubeInsight

@@ -4,6 +4,9 @@ import { mkdirSync } from 'fs';
 // Mock fs
 vi.mock('fs', () => ({
   mkdirSync: vi.fn(),
+  existsSync: vi.fn().mockReturnValue(false),
+  readFileSync: vi.fn().mockReturnValue('{}'),
+  writeFileSync: vi.fn(),
 }));
 
 // Mock config
@@ -193,5 +196,128 @@ describe('captureFrames', () => {
     ).rejects.toThrow('screenshot failed');
 
     expect(mockPage.close).toHaveBeenCalled();
+  });
+
+  it('returns resumed=false when no checkpoint exists', async () => {
+    const { captureFrames } = await import(
+      '../../../src/render/capture/index.js'
+    );
+    const result = await captureFrames({
+      html: '<html></html>',
+      outputDir: '/tmp/no-checkpoint',
+      width: 800,
+      height: 600,
+      fps: 10,
+      duration: 1,
+      isStatic: false,
+    });
+
+    expect(result.resumed).toBe(false);
+    expect(result.resumedFrom).toBe(0);
+  });
+
+  it('resumes from checkpoint when checkpoint.json exists with matching totalFrames', async () => {
+    const fs = await import('fs');
+    const existsSyncMock = vi.mocked(fs.existsSync);
+    const readFileSyncMock = vi.mocked(fs.readFileSync);
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+
+    // checkpoint.json exists + last frame file exists
+    existsSyncMock.mockImplementation((p: any) => {
+      const pathStr = String(p);
+      if (pathStr.endsWith('checkpoint.json')) return true;
+      if (pathStr.endsWith('frame_00005.png')) return true;
+      return false;
+    });
+    readFileSyncMock.mockReturnValue(JSON.stringify({
+      lastFrame: 5,
+      totalFrames: 10,
+      updatedAt: '2026-03-31T00:00:00Z',
+    }));
+
+    const { captureFrames } = await import(
+      '../../../src/render/capture/index.js'
+    );
+    const result = await captureFrames({
+      html: '<html></html>',
+      outputDir: '/tmp/resume-test',
+      width: 800,
+      height: 600,
+      fps: 10,
+      duration: 1,
+      isStatic: false,
+    });
+
+    expect(result.resumed).toBe(true);
+    expect(result.resumedFrom).toBe(5);
+    expect(result.frameCount).toBe(10);
+    // Should only capture frames 6-10 (5 frames, not 10)
+    expect(mockPage.screenshot).toHaveBeenCalledTimes(5);
+
+    // Reset mocks
+    existsSyncMock.mockReturnValue(false);
+    readFileSyncMock.mockReturnValue('{}');
+  });
+
+  it('writes checkpoint every 100 frames', async () => {
+    const fs = await import('fs');
+    const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+
+    const { captureFrames } = await import(
+      '../../../src/render/capture/index.js'
+    );
+    await captureFrames({
+      html: '<html></html>',
+      outputDir: '/tmp/checkpoint-write',
+      width: 800,
+      height: 600,
+      fps: 25,
+      duration: 8, // 200 frames
+      isStatic: false,
+    });
+
+    // Should write checkpoint at frame 100, 200 (interval) + final
+    const checkpointWrites = writeFileSyncMock.mock.calls.filter(
+      (call) => String(call[0]).endsWith('checkpoint.json'),
+    );
+    // At least 2 writes: frame 100 + final (200)
+    expect(checkpointWrites.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('ignores checkpoint with mismatched totalFrames', async () => {
+    const fs = await import('fs');
+    const existsSyncMock = vi.mocked(fs.existsSync);
+    const readFileSyncMock = vi.mocked(fs.readFileSync);
+
+    existsSyncMock.mockImplementation((p: any) => {
+      if (String(p).endsWith('checkpoint.json')) return true;
+      return false;
+    });
+    readFileSyncMock.mockReturnValue(JSON.stringify({
+      lastFrame: 5,
+      totalFrames: 999, // different from actual
+      updatedAt: '2026-03-31T00:00:00Z',
+    }));
+
+    const { captureFrames } = await import(
+      '../../../src/render/capture/index.js'
+    );
+    const result = await captureFrames({
+      html: '<html></html>',
+      outputDir: '/tmp/mismatch-test',
+      width: 800,
+      height: 600,
+      fps: 10,
+      duration: 1,
+      isStatic: false,
+    });
+
+    expect(result.resumed).toBe(false);
+    expect(result.resumedFrom).toBe(0);
+    // All 10 frames captured from scratch
+    expect(mockPage.screenshot).toHaveBeenCalledTimes(10);
+
+    existsSyncMock.mockReturnValue(false);
+    readFileSyncMock.mockReturnValue('{}');
   });
 });

@@ -1,6 +1,8 @@
 import { spawn } from 'child_process';
 import { IROutput, IRAudioMix } from '../parser/types.js';
 import { buildAudioMix } from './audio-mixer.js';
+import { resolveCodec, getQualityArgs, getPresetArgs, type HWCodec } from './hwaccel.js';
+import { config } from '../../config/index.js';
 
 export interface EncodeOptions {
   frameDir: string;
@@ -11,22 +13,16 @@ export interface EncodeOptions {
   outputPath: string;
 }
 
-const QUALITY_CRF: Record<string, number> = {
-  verylow: 35,
-  low: 28,
-  medium: 23,
-  high: 18,
-  veryhigh: 15,
-};
-
 export async function encode(opts: EncodeOptions): Promise<string> {
   const args = buildFFmpegArgs(opts);
   return runFFmpeg(args, opts.outputPath);
 }
 
-export function buildFFmpegArgs(opts: EncodeOptions): string[] {
+export function buildFFmpegArgs(opts: EncodeOptions, codecOverride?: HWCodec): string[] {
   const { output, frameDir, framePattern } = opts;
-  const crf = QUALITY_CRF[output.quality] ?? 23;
+  const codec = codecOverride ?? resolveCodec(config.encoder.codec);
+  const [qualityFlag, qualityValue] = getQualityArgs(output.quality, codec);
+  const presetArgs = getPresetArgs(codec);
 
   switch (output.format) {
     case 'mp4': {
@@ -43,9 +39,9 @@ export function buildFFmpegArgs(opts: EncodeOptions): string[] {
             ...mix.inputArgs,
             '-filter_complex', mix.filterComplex,
             ...mix.mapArgs,
-            '-c:v', 'libx264',
-            '-preset', 'medium',
-            '-crf', String(crf),
+            '-c:v', codec,
+            ...presetArgs,
+            qualityFlag, qualityValue,
             '-pix_fmt', 'yuv420p',
             '-movflags', '+faststart',
             '-shortest',
@@ -58,9 +54,9 @@ export function buildFFmpegArgs(opts: EncodeOptions): string[] {
       return [
         '-framerate', String(output.fps),
         '-i', `${frameDir}/${framePattern}`,
-        '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-crf', String(crf),
+        '-c:v', codec,
+        ...presetArgs,
+        qualityFlag, qualityValue,
         '-pix_fmt', 'yuv420p',
         '-movflags', '+faststart',
         '-y',

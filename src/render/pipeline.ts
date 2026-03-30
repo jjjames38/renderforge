@@ -2,6 +2,8 @@ import { parseTimeline } from './parser/index.js';
 import { buildScene } from './builder/index.js';
 import { captureFrames } from './capture/index.js';
 import { encode } from './encoder/index.js';
+import { prefetchAssets, applyPrefetchPaths } from './prefetch.js';
+import { progressHub } from '../api/progress.js';
 import type { IRTimeline } from './parser/types.js';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
@@ -29,6 +31,7 @@ export async function executePipeline(
   editJson: { timeline: any; output: any; merge?: any[]; callback?: string },
   workDir: string,
   onStatus?: StatusCallback,
+  renderId?: string,
 ): Promise<PipelineResult> {
   mkdirSync(workDir, { recursive: true });
 
@@ -41,6 +44,44 @@ export async function executePipeline(
     await onStatus?.('fetching');
     const ir: IRTimeline = parseTimeline(editJson);
     stageLogs.push(logStage('parse', stageStart));
+
+    // Stage 1.5: Prefetch external assets (images, videos, audio, fonts)
+    if (ir.assets.length > 0) {
+      stageStart = Date.now();
+      const prefetchDir = join(workDir, 'prefetch');
+      const prefetchResult = await prefetchAssets(ir.assets, prefetchDir);
+      applyPrefetchPaths(ir.assets, prefetchResult.urlMap);
+
+      // Replace src URLs in scene layers with local paths
+      for (const scene of ir.scenes) {
+        for (const layer of scene.layers) {
+          if (layer.asset.src) {
+            const localPath = prefetchResult.urlMap.get(layer.asset.src);
+            if (localPath) {
+              layer.asset.src = `file://${localPath}`;
+            }
+          }
+        }
+      }
+
+      // Replace audio clip src URLs
+      for (const clip of ir.audio.clips) {
+        const localPath = prefetchResult.urlMap.get(clip.src);
+        if (localPath) clip.src = localPath;
+      }
+
+      // Replace soundtrack src
+      if (ir.audio.soundtrack) {
+        const localPath = prefetchResult.urlMap.get(ir.audio.soundtrack.src);
+        if (localPath) ir.audio.soundtrack.src = localPath;
+      }
+
+      const prefetchLog = logStage('prefetch', stageStart);
+      (prefetchLog as any).downloaded = prefetchResult.downloaded;
+      (prefetchLog as any).cached = prefetchResult.cached;
+      (prefetchLog as any).failed = prefetchResult.failed.length;
+      stageLogs.push(prefetchLog);
+    }
 
     // Stage 2: Build HTML scene
     stageStart = Date.now();
@@ -68,8 +109,22 @@ export async function executePipeline(
       fps: ir.output.fps,
       duration: totalDuration,
       isStatic,
+      onProgress: renderId
+        ? (frame, total) => progressHub.emitProgress({
+            renderId: renderId!,
+            stage: 'capture',
+            frame,
+            totalFrames: total,
+            percent: Math.round((frame / total) * 100 * 10) / 10,
+          })
+        : undefined,
     });
-    stageLogs.push(logStage('capture', stageStart));
+    const captureLog = logStage('capture', stageStart);
+    if (captureResult.resumed) {
+      (captureLog as any).resumedFrom = captureResult.resumedFrom;
+      (captureLog as any).skippedFrames = captureResult.resumedFrom;
+    }
+    stageLogs.push(captureLog);
 
     // Stage 4: Encode
     stageStart = Date.now();
@@ -90,6 +145,11 @@ export async function executePipeline(
     renderDuration.observe(totalMs / 1000);
     renderTotal.inc({ status: 'completed' });
 
+    if (renderId) {
+      progressHub.emitProgress({ renderId, stage: 'done', percent: 100 });
+      progressHub.cleanup(renderId);
+    }
+
     // Structured log output
     const logEntry = {
       event: 'pipeline_complete',
@@ -107,6 +167,11 @@ export async function executePipeline(
     };
   } catch (error) {
     renderTotal.inc({ status: 'failed' });
+
+    if (renderId) {
+      progressHub.emitProgress({ renderId, stage: 'failed', percent: 0 });
+      progressHub.cleanup(renderId);
+    }
 
     const totalMs = Date.now() - pipelineStart;
     const logEntry = {

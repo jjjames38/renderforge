@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](package.json)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-270%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-363%20passing-brightgreen.svg)]()
 
 Self-hosted, **Shotstack API v1-compatible** video render engine. Hybrid Puppeteer + FFmpeg pipeline delivers smooth Ken Burns effects, transitions, and text overlays with FFmpeg encoding — **no per-render fees**.
 
@@ -42,6 +42,11 @@ Built for high-volume automated video production (270-channel YouTube automation
 - **Aspect ratios** — 16:9, 9:16, 1:1, 4:5, 4:3
 - **Templates** — CRUD with merge field substitution (`{{PLACEHOLDER}}`)
 - **Extended API** — Batch render, preview mode, queue status dashboard
+- **Health Check** — `GET /health` (liveness) + `?detail=1` (Redis, Chromium, FFmpeg, disk, GPU status)
+- **Frame Checkpoint** — Crash recovery with automatic resume from last captured frame
+- **Asset Prefetch** — Parallel download of external assets before rendering (eliminates Puppeteer network wait)
+- **Real-time Progress** — WebSocket `ws://host/ws/progress/:renderId` for live capture progress
+- **Hardware Encoding** — Auto-detect NVENC / VideoToolbox / QSV with software fallback
 - **Auth** — x-api-key (Shotstack compatible) + JWT Bearer
 - **Observability** — Prometheus metrics (`/metrics`) + pino structured logging
 - **Webhooks** — Callback POST on render complete/fail with retry
@@ -57,8 +62,9 @@ Client (n8n / cURL / SDK)
   → Render Pipeline:
       1. Timeline Parser — Shotstack JSON → Internal Representation
       2. Scene Builder — IR → HTML/CSS with embedded updateFrame() JS
-      3. Frame Capture — Puppeteer page.evaluate() per frame (PNG sequence)
-      4. Encoder — FFmpeg H.264 + audio mixing → MP4
+      1.5. Asset Prefetch — parallel download external URLs → local files
+      3. Frame Capture — Puppeteer page.evaluate() per frame (PNG sequence + checkpoint)
+      4. Encoder — FFmpeg H.264/NVENC + audio mixing → MP4
   → Asset Storage (local FS / S3)
   → Client polls GET /edit/v1/render/:id → status: done, url: "..."
 ```
@@ -76,7 +82,7 @@ Client (n8n / cURL / SDK)
 | Image Processing | Sharp |
 | Database | Drizzle ORM + SQLite / PostgreSQL |
 | Language | TypeScript |
-| Tests | Vitest (270 tests) |
+| Tests | Vitest (363 tests) |
 
 ## Quick Start
 
@@ -410,15 +416,18 @@ src/
     ingest/        # Source management + upload
     create/        # AI generation endpoints
     extended/      # Batch, preview, queue status
+    health.ts      # Health check endpoint
+    progress.ts    # WebSocket real-time progress
     metrics.ts     # Prometheus metrics
     middleware/    # Auth (x-api-key + JWT)
   render/
     parser/        # Shotstack JSON → Internal Representation
     builder/       # IR → HTML + updateFrame() JS
-    capture/       # Puppeteer per-frame capture
-    encoder/       # FFmpeg video + audio mixing
+    capture/       # Puppeteer per-frame capture (checkpoint + resume)
+    encoder/       # FFmpeg video + audio mixing (HW accel)
     effects/       # Ken Burns, transitions, filters, tween, chromakey
     assets/        # 14 asset type handlers
+    prefetch.ts    # Asset prefetch (parallel download)
     pipeline.ts    # Pipeline orchestrator
   queue/
     queues.ts      # BullMQ queue definitions
@@ -433,7 +442,7 @@ docker/
   Dockerfile       # Multi-stage production build
   docker-compose.yml       # Production stack
   docker-compose.dev.yml   # Dev infrastructure
-tests/             # 270 Vitest test suites
+tests/             # 363 Vitest test suites
 docs/
   superpowers/
     specs/         # Design specification

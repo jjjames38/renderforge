@@ -20,6 +20,8 @@ import { previewRoutes } from './api/extended/preview.js';
 import { queueStatusRoutes } from './api/extended/queue-status.js';
 import { ecosystemRoutes } from './api/extended/ecosystem.js';
 import { metricsRoutes } from './api/metrics.js';
+import { healthRoutes } from './api/health.js';
+import { progressRoutes } from './api/progress.js';
 import { config } from './config/index.js';
 import { getRedisConnection } from './queue/connection.js';
 import type { Worker } from 'bullmq';
@@ -87,6 +89,8 @@ export async function createServer(opts?: { testing?: boolean }) {
   await app.register(queueStatusRoutes);
   await app.register(ecosystemRoutes);
   await app.register(metricsRoutes);
+  await app.register(healthRoutes);
+  await app.register(progressRoutes);
 
   // Start render worker and queues (skip in test mode)
   if (!opts?.testing) {

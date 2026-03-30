@@ -96,4 +96,7 @@ export const config = {
     cleanup_interval_seconds: parseInt(process.env.GPU_CLEANUP_INTERVAL ?? '30', 10),
     max_swap_timeout_ms: parseInt(process.env.GPU_MAX_SWAP_TIMEOUT ?? '30000', 10),
   },
+  encoder: {
+    codec: process.env.ENCODER_CODEC ?? 'auto',
+  },
 } as const;
