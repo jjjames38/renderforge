@@ -141,19 +141,20 @@ window.updateFrame = function(time) {
       // Linear interpolation for constant speed throughout
 
       var transform = '';
+      // Zoom: gentle 10% range (was 30%), Slide: pre-scale 1.15x + move 5% (was 10%)
       switch (base) {
         case 'zoomIn':
-          transform = 'scale(' + (1 + 0.3 * progress) + ')'; break;
+          transform = 'scale(' + (1.02 + 0.1 * progress) + ')'; break;
         case 'zoomOut':
-          transform = 'scale(' + (1.3 - 0.3 * progress) + ')'; break;
+          transform = 'scale(' + (1.12 - 0.1 * progress) + ')'; break;
         case 'slideLeft':
-          transform = 'translateX(' + (-10 * progress) + '%)'; break;
+          transform = 'scale(1.15) translateX(' + (-5 * progress) + '%)'; break;
         case 'slideRight':
-          transform = 'translateX(' + (10 * progress) + '%)'; break;
+          transform = 'scale(1.15) translateX(' + (5 * progress) + '%)'; break;
         case 'slideUp':
-          transform = 'translateY(' + (-10 * progress) + '%)'; break;
+          transform = 'scale(1.15) translateY(' + (-5 * progress) + '%)'; break;
         case 'slideDown':
-          transform = 'translateY(' + (10 * progress) + '%)'; break;
+          transform = 'scale(1.15) translateY(' + (5 * progress) + '%)'; break;
       }
 
       // Prepend any base transform from the element
