@@ -440,7 +440,9 @@ docs/
     plans/         # Implementation plan
 ```
 
-## Roadmap / TODO
+
+
+## Roadmap & TODO
 
 ### Immediate (Next)
 - [ ] n8n에서 테스트 에피소드 1개 RenderForge로 실행 → Shotstack 결과물과 품질 비교
@@ -455,7 +457,7 @@ docs/
 - [ ] ElevenLabs → VoiceCore(Fish Speech) 전환
 
 ### Medium-term
-- [ ] CubeInsight → RenderForge 트렌드 데이터 피드백 루프
+- [ ] CubeInsight → RenderForge 트랜드 데이터 피드백 루프
 - [ ] ProfileCore HTTP API 서버 (v1.1)
 - [ ] 9:16 Shorts 자동 추출 엔진 최적화
 - [ ] LoRA 학습 데이터 준비 (9 Tier별 스타일)
@@ -466,28 +468,3 @@ docs/
 - [ ] 다국어 확장 (JP, ES 콘텐츠)
 - [ ] Product Hunt / AppSumo 런칭
 - [ ] 온프레미스 RTX 4090 서버 vs 클라우드 결정
-
-## Development
-
-```bash
-pnpm install
-docker compose -f docker/docker-compose.dev.yml up -d
-pnpm dev            # Start with hot reload
-pnpm test           # Run all 323 tests
-pnpm test:watch     # Watch mode
-pnpm build          # TypeScript compile
-```
-
-## Contributing
-
-Contributions welcome. Please open an issue first to discuss changes.
-
-## License
-
-[MIT](LICENSE)
-
-## Roadmap & TODO
-
-- [ ] 🚀 초기 환경 설정 완료
-- [ ] 🛠️ 핵심 로직 고도화 진행 중
-- [x] 🛡️ Gstack Ecosystem 통합 완료
