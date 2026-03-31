@@ -16,7 +16,7 @@ describe('Health Check', () => {
     const res = await app.inject({ method: 'GET', url: '/' });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
-    expect(body.name).toBe('renderforge');
+    expect(body.name).toBe('cutengine');
     expect(body.version).toBeDefined();
   });
 

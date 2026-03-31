@@ -45,7 +45,7 @@ export async function createServer(opts?: { testing?: boolean }) {
   (app as any).db = db;
 
   app.get('/', async () => ({
-    name: 'renderforge',
+    name: 'cutengine',
     version: '0.1.0',
     status: 'ok',
   }));
@@ -62,7 +62,7 @@ export async function createServer(opts?: { testing?: boolean }) {
       const mgr = (app as any).gpuManager;
       deps.gpu = mgr.getStatus().is_swapping ? 'degraded' : 'healthy';
     }
-    return createHealthResponse('renderforge', '0.1.0', startTime, deps);
+    return createHealthResponse('cutengine', '0.1.0', startTime, deps);
   });
 
   // Register static file serving for rendered assets

@@ -1,4 +1,4 @@
-# 🚀 Gstack Ecosystem Mission: RenderForge
+# 🚀 Gstack Ecosystem Mission: CutEngine
 
 ## 🎯 핵심 인사이트
 - Shotstack 비용을 0원으로 만든 Browserless + FFmpeg 기반 강력한 렌더러.

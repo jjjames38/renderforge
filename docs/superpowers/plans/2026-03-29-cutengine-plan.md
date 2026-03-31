@@ -1,4 +1,4 @@
-# RenderForge Implementation Plan
+# CutEngine Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Fastify, BullMQ, Redis, Puppeteer, FFmpeg, Sharp, Drizzle ORM, SQLite, Vitest, Docker
 
-**Spec:** `docs/superpowers/specs/2026-03-29-renderforge-design.md`
+**Spec:** `docs/superpowers/specs/2026-03-29-cutengine-design.md`
 
 ---
 
@@ -36,7 +36,7 @@ git init
 
 ```json
 {
-  "name": "renderforge",
+  "name": "cutengine",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -134,14 +134,14 @@ export const config = {
     path: process.env.STORAGE_PATH ?? './data/assets',
     s3: {
       endpoint: process.env.S3_ENDPOINT,
-      bucket: process.env.S3_BUCKET ?? 'renderforge',
+      bucket: process.env.S3_BUCKET ?? 'cutengine',
       accessKey: process.env.S3_ACCESS_KEY,
       secretKey: process.env.S3_SECRET_KEY,
     },
   },
   db: {
     driver: (process.env.DB_DRIVER ?? 'sqlite') as 'sqlite' | 'pg',
-    sqlitePath: process.env.SQLITE_PATH ?? './data/renderforge.db',
+    sqlitePath: process.env.SQLITE_PATH ?? './data/cutengine.db',
     pgUrl: process.env.DATABASE_URL,
   },
   auth: {
@@ -158,7 +158,7 @@ File: `src/index.ts`
 ```typescript
 import { config } from './config/index.js';
 
-console.log(`RenderForge v0.1.0 starting on port ${config.port}...`);
+console.log(`CutEngine v0.1.0 starting on port ${config.port}...`);
 ```
 
 - [ ] **Step 8: Create .gitignore and .env.example**
@@ -181,7 +181,7 @@ CHROMIUM_WS=ws://localhost:3001
 STORAGE_DRIVER=local
 STORAGE_PATH=./data/assets
 DB_DRIVER=sqlite
-SQLITE_PATH=./data/renderforge.db
+SQLITE_PATH=./data/cutengine.db
 AUTH_ENABLED=false
 API_KEYS=
 ```
@@ -191,7 +191,7 @@ API_KEYS=
 ```bash
 pnpm dev
 ```
-Expected: `RenderForge v0.1.0 starting on port 3000...`
+Expected: `CutEngine v0.1.0 starting on port 3000...`
 
 - [ ] **Step 10: Commit**
 
@@ -355,7 +355,7 @@ describe('Health Check', () => {
     const res = await app.inject({ method: 'GET', url: '/' });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
-    expect(body.name).toBe('renderforge');
+    expect(body.name).toBe('cutengine');
     expect(body.version).toBeDefined();
   });
 });
@@ -385,7 +385,7 @@ export async function createServer(opts?: { testing?: boolean }) {
   await app.register(cors);
 
   app.get('/', async () => ({
-    name: 'renderforge',
+    name: 'cutengine',
     version: '0.1.0',
     status: 'ok',
   }));
@@ -408,7 +408,7 @@ import { createServer } from './server.js';
 async function main() {
   const app = await createServer();
   await app.listen({ port: config.port, host: config.host });
-  console.log(`RenderForge v0.1.0 listening on ${config.host}:${config.port}`);
+  console.log(`CutEngine v0.1.0 listening on ${config.host}:${config.port}`);
 }
 
 main().catch((err) => {
@@ -468,7 +468,7 @@ CMD ["node", "dist/index.js"]
 File: `docker/docker-compose.yml`
 ```yaml
 services:
-  renderforge:
+  cutengine:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -771,7 +771,7 @@ export async function renderRoutes(app: FastifyInstance) {
       message: 'Created',
       response: {
         id,
-        owner: 'renderforge',
+        owner: 'cutengine',
         status: 'queued',
         url: null,
         data: null,
@@ -794,7 +794,7 @@ export async function renderRoutes(app: FastifyInstance) {
       message: 'OK',
       response: {
         id: render.id,
-        owner: 'renderforge',
+        owner: 'cutengine',
         status: render.status,
         url: render.url,
         poster: render.poster,

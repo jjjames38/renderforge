@@ -13,25 +13,25 @@ describe('Observability - Metrics', () => {
     await app.close();
   });
 
-  it('GET /metrics returns 200 with Prometheus format containing renderforge_render_total', async () => {
+  it('GET /metrics returns 200 with Prometheus format containing cutengine_render_total', async () => {
     const res = await app.inject({ method: 'GET', url: '/metrics' });
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toContain('text/plain');
-    expect(res.body).toContain('renderforge_render_total');
+    expect(res.body).toContain('cutengine_render_total');
   });
 
   it('metrics registry has all 4 custom metrics defined', () => {
     const metricNames = (metricsRegistry.getMetricsAsArray() as any[]).map(m => m.name);
-    expect(metricNames).toContain('renderforge_render_total');
-    expect(metricNames).toContain('renderforge_render_duration_seconds');
-    expect(metricNames).toContain('renderforge_queue_depth');
-    expect(metricNames).toContain('renderforge_active_workers');
+    expect(metricNames).toContain('cutengine_render_total');
+    expect(metricNames).toContain('cutengine_render_duration_seconds');
+    expect(metricNames).toContain('cutengine_queue_depth');
+    expect(metricNames).toContain('cutengine_active_workers');
   });
 
   it('GET /metrics includes histogram and gauge metrics', async () => {
     const res = await app.inject({ method: 'GET', url: '/metrics' });
-    expect(res.body).toContain('renderforge_render_duration_seconds');
-    expect(res.body).toContain('renderforge_queue_depth');
-    expect(res.body).toContain('renderforge_active_workers');
+    expect(res.body).toContain('cutengine_render_duration_seconds');
+    expect(res.body).toContain('cutengine_queue_depth');
+    expect(res.body).toContain('cutengine_active_workers');
   });
 });

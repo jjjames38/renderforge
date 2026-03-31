@@ -1,4 +1,4 @@
-# RenderForge — Unified RunPod RTX 4090 Deployment
+# CutEngine — Unified RunPod RTX 4090 Deployment
 #
 # Single GPU runs all 3 engines with time-sharing:
 #   - Fish Speech TTS (2GB VRAM, always resident)
@@ -14,7 +14,7 @@
 #   docker compose -f docker/docker-compose.runpod.yml up -d
 
 services:
-  renderforge:
+  cutengine:
     build: ..
     ports: ["3000:3000"]
     depends_on: [redis, chromium]

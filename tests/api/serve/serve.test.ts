@@ -167,7 +167,7 @@ describe('Serve API - Assets', () => {
 // ---------- LocalStorage ----------
 
 describe('LocalStorage', () => {
-  const testDir = join(tmpdir(), `renderforge-test-${Date.now()}`);
+  const testDir = join(tmpdir(), `cutengine-test-${Date.now()}`);
   let storage: LocalStorage;
 
   beforeEach(() => {

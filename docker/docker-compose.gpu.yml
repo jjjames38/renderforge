@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  RenderForge + VisualCore + VoiceCore — GPU Production Stack
+#  CutEngine + VisualCore + VoiceCore — GPU Production Stack
 # ═══════════════════════════════════════════════════════════════
 #
 #  All services share a single RTX 4090 (24GB VRAM).
@@ -9,7 +9,7 @@
 #    docker compose -f docker/docker-compose.gpu.yml up -d
 #
 #  Scale render workers:
-#    docker compose -f docker/docker-compose.gpu.yml up -d --scale renderforge=4
+#    docker compose -f docker/docker-compose.gpu.yml up -d --scale cutengine=4
 #
 # ═══════════════════════════════════════════════════════════════
 
@@ -26,9 +26,9 @@ x-gpu-device: &gpu-device
 
 services:
   # ──────────────────────────────────────────
-  #  RenderForge (main application)
+  #  CutEngine (main application)
   # ──────────────────────────────────────────
-  renderforge:
+  cutengine:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -43,8 +43,8 @@ services:
       - HUNYUAN_HOST=hunyuan
       - HUNYUAN_PORT=8190
     volumes:
-      - renderforge-data:/data
-      - shared-assets:/shared    # Shared between RenderForge and GPU services
+      - cutengine-data:/data
+      - shared-assets:/shared    # Shared between CutEngine and GPU services
     depends_on:
       redis:
         condition: service_healthy
@@ -91,7 +91,7 @@ services:
   #  ComfyUI (Flux image generation)
   # ──────────────────────────────────────────
   #  Runs Flux.2 Klein 4B for text-to-image.
-  #  API mode enabled for RenderForge integration.
+  #  API mode enabled for CutEngine integration.
   # ──────────────────────────────────────────
   comfyui:
     image: comfyorg/comfyui:latest
@@ -118,7 +118,7 @@ services:
   #  HunyuanVideo 1.5 (video generation)
   # ──────────────────────────────────────────
   #  Runs HunyuanVideo 1.5 step-distilled model.
-  #  REST API wrapper for RenderForge integration.
+  #  REST API wrapper for CutEngine integration.
   #  14GB VRAM with CPU offloading.
   # ──────────────────────────────────────────
   hunyuan:
@@ -173,7 +173,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  renderforge-data:
+  cutengine-data:
     driver: local
   redis-data:
     driver: local

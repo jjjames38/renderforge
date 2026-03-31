@@ -30,14 +30,14 @@ export const config = {
     path: process.env.STORAGE_PATH ?? './data/assets',
     s3: {
       endpoint: process.env.S3_ENDPOINT,
-      bucket: process.env.S3_BUCKET ?? 'renderforge',
+      bucket: process.env.S3_BUCKET ?? 'cutengine',
       accessKey: process.env.S3_ACCESS_KEY,
       secretKey: process.env.S3_SECRET_KEY,
     },
   },
   db: {
     driver: (process.env.DB_DRIVER ?? 'sqlite') as 'sqlite' | 'pg',
-    sqlitePath: process.env.SQLITE_PATH ?? './data/renderforge.db',
+    sqlitePath: process.env.SQLITE_PATH ?? './data/cutengine.db',
     pgUrl: process.env.DATABASE_URL,
   },
   auth: {

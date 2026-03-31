@@ -4,7 +4,7 @@ import { createServer } from './server.js';
 async function main() {
   const app = await createServer();
   await app.listen({ port: config.port, host: config.host });
-  console.log(`RenderForge v0.1.0 listening on ${config.host}:${config.port}`);
+  console.log(`CutEngine v0.1.0 listening on ${config.host}:${config.port}`);
 }
 
 main().catch((err) => {

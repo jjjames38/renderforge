@@ -1,5 +1,5 @@
 services:
-  renderforge:
+  cutengine:
     build:
       context: ..
       dockerfile: docker/Dockerfile

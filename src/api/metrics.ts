@@ -7,28 +7,28 @@ export const metricsRegistry = new Registry();
 collectDefaultMetrics({ register: metricsRegistry });
 
 export const renderTotal = new Counter({
-  name: 'renderforge_render_total',
+  name: 'cutengine_render_total',
   help: 'Total number of render jobs processed',
   labelNames: ['status'] as const,
   registers: [metricsRegistry],
 });
 
 export const renderDuration = new Histogram({
-  name: 'renderforge_render_duration_seconds',
+  name: 'cutengine_render_duration_seconds',
   help: 'Duration of render jobs in seconds',
   buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600],
   registers: [metricsRegistry],
 });
 
 export const queueDepth = new Gauge({
-  name: 'renderforge_queue_depth',
+  name: 'cutengine_queue_depth',
   help: 'Current number of jobs waiting in queues',
   labelNames: ['queue'] as const,
   registers: [metricsRegistry],
 });
 
 export const activeWorkers = new Gauge({
-  name: 'renderforge_active_workers',
+  name: 'cutengine_active_workers',
   help: 'Number of currently active worker instances',
   labelNames: ['worker'] as const,
   registers: [metricsRegistry],

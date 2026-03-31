@@ -1,4 +1,4 @@
-# RenderForge — Design Specification
+# CutEngine — Design Specification
 
 Self-hosted, Shotstack-compatible video render engine with a hybrid rendering pipeline (Puppeteer + FFmpeg).
 
@@ -291,8 +291,8 @@ Client GET /edit/v1/render/{id}
 
 ```yaml
 services:
-  renderforge:    # API + Worker (Fastify + BullMQ)
-    image: renderforge:latest
+  cutengine:    # API + Worker (Fastify + BullMQ)
+    image: cutengine:latest
     ports: ["3000:3000"]
     depends_on: [redis, chromium]
     environment:
@@ -322,24 +322,24 @@ services:
     image: postgres:16-alpine
     ports: ["5432:5432"]
     environment:
-      - POSTGRES_DB=renderforge
+      - POSTGRES_DB=cutengine
 
 volumes:
   assets:
 ```
 
-셀프호스팅 최소 구성: `renderforge` + `redis` + `chromium` (3개)
+셀프호스팅 최소 구성: `cutengine` + `redis` + `chromium` (3개)
 풀 구성: 위 5개 전체
 
 ### Worker 수평 확장
 
 ```bash
-docker-compose up --scale renderforge=4 --scale chromium=4
+docker-compose up --scale cutengine=4 --scale chromium=4
 ```
 각 Worker는 전용 Chromium 인스턴스에 연결. Worker와 Chromium은 1:1로 스케일링.
 
 연결 전략:
-- 각 renderforge 인스턴스는 환경변수 또는 서비스 디스커버리로 자신의 Chromium 인스턴스를 찾음
+- 각 cutengine 인스턴스는 환경변수 또는 서비스 디스커버리로 자신의 Chromium 인스턴스를 찾음
 - 대안: 단일 Chromium 인스턴스에 `MAX_CONCURRENT_SESSIONS`을 Worker 수에 맞춰 설정 (예: Worker 4개면 세션 4+)
 - 프로덕션: Chromium pool manager가 Worker에 세션을 동적 할당
 
@@ -421,7 +421,7 @@ FPS 지원: 12, 15, 24, 23.976, 25, 29.97, 30, 48, 50, 59.94, 60
 
 ## Differentiation from Shotstack
 
-| | Shotstack | RenderForge |
+| | Shotstack | CutEngine |
 |---|----------|-------------|
 | 배포 | 클라우드 전용 | 셀프호스팅 + 클라우드 |
 | 가격 | 렌더당 과금 | 셀프호스팅 무료 |
@@ -448,7 +448,7 @@ FPS 지원: 12, 15, 24, 23.976, 25, 29.97, 30, 48, 50, 59.94, 60
 ## Project Structure
 
 ```
-renderforge/
+cutengine/
 ├── src/
 │   ├── api/                  # API Module
 │   │   ├── edit/             # Edit API routes
@@ -517,10 +517,10 @@ renderforge/
 - 각 렌더 단계(parse → build → capture → encode)별 시작/완료/소요시간 로그
 
 **Metrics:** prom-client (Prometheus 호환)
-- `renderforge_render_total` — 렌더 요청 수 (status별)
-- `renderforge_render_duration_seconds` — 렌더 소요시간 히스토그램
-- `renderforge_queue_depth` — 큐 대기 작업 수
-- `renderforge_active_workers` — 활성 Worker 수
+- `cutengine_render_total` — 렌더 요청 수 (status별)
+- `cutengine_render_duration_seconds` — 렌더 소요시간 히스토그램
+- `cutengine_queue_depth` — 큐 대기 작업 수
+- `cutengine_active_workers` — 활성 Worker 수
 - `GET /metrics` 엔드포인트 제공
 
 ---
@@ -554,4 +554,4 @@ Shotstack 호환 에러 응답 형식:
 - **Integration Tests:** API 엔드포인트 → 렌더 완료 전체 흐름
 - **Compatibility Tests:** Shotstack JSON 샘플을 입력하여 동일한 응답 구조 검증
 - **Visual Regression:** 렌더링 결과 스크린샷을 기준 이미지와 비교
-- **Beyond Orbit 호환성:** 기존 n8n 워크플로우의 실제 Shotstack 요청을 RenderForge로 전환하여 결과 비교
+- **Beyond Orbit 호환성:** 기존 n8n 워크플로우의 실제 Shotstack 요청을 CutEngine로 전환하여 결과 비교

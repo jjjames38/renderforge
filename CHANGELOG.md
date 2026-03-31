@@ -4,7 +4,7 @@
 
 ### Production Hardening — Reliability, Performance & Observability
 
-Five improvements to make RenderForge production-ready for 270-channel automation.
+Five improvements to make CutEngine production-ready for 270-channel automation.
 
 #### Health Check Endpoint
 - `GET /health` — fast liveness probe for Docker/K8s
@@ -107,7 +107,7 @@ VoiceCore is disabled by default (opt-in via `VOICECORE_ENABLED=true`).
 
 ### VisualCore Integration
 
-Integrate VisualCore local GPU inference engine into RenderForge Create API.
+Integrate VisualCore local GPU inference engine into CutEngine Create API.
 GPU features are disabled by default (opt-in via `GPU_ENABLED=true`).
 
 #### Create API Enhancements
@@ -188,8 +188,8 @@ Video, Image, Text, RichText, Audio, Shape, SVG, HTML, Title, Luma, Caption, Tex
 - FFmpeg amix filter_complex for multi-stream combining
 
 #### Infrastructure
-- Docker Compose one-click deploy (renderforge + redis + chromium)
-- Horizontal scaling: `docker compose up --scale renderforge=4 --scale chromium=4`
+- Docker Compose one-click deploy (cutengine + redis + chromium)
+- Horizontal scaling: `docker compose up --scale cutengine=4 --scale chromium=4`
 - SQLite (self-hosting) / PostgreSQL (cloud) via Drizzle ORM
 - Local filesystem / S3-compatible storage (MinIO)
 - Prometheus metrics + pino structured logging

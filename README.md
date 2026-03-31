@@ -1,4 +1,4 @@
-# RenderForge
+# CutEngine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](package.json)
@@ -9,9 +9,9 @@ Self-hosted, **Shotstack API v1-compatible** video render engine. Hybrid Puppete
 
 Built for high-volume automated video production (270-channel YouTube automation).
 
-## Why RenderForge?
+## Why CutEngine?
 
-| | Shotstack | RenderForge |
+| | Shotstack | CutEngine |
 |---|-----------|-------------|
 | Deployment | Cloud only | **Self-hosted** + Cloud |
 | Cost | $0.25/render ($125~$1,900/mo) | **$0** (self-hosted) |
@@ -69,7 +69,7 @@ Client (n8n / cURL / SDK)
   → Client polls GET /edit/v1/render/:id → status: done, url: "..."
 ```
 
-**Key design:** Instead of CSS animations (unreliable timing), RenderForge computes KenBurns transforms and transition opacity per-frame via `page.evaluate()`. This gives frame-perfect control over all visual effects.
+**Key design:** Instead of CSS animations (unreliable timing), CutEngine computes KenBurns transforms and transition opacity per-frame via `page.evaluate()`. This gives frame-perfect control over all visual effects.
 
 ## Tech Stack
 
@@ -87,8 +87,8 @@ Client (n8n / cURL / SDK)
 ## Quick Start
 
 ```bash
-git clone https://github.com/jjjames38/renderforge.git
-cd renderforge
+git clone https://github.com/jjjames38/cutengine.git
+cd cutengine
 
 pnpm install
 
@@ -221,25 +221,25 @@ Compatible pairs: Fish Speech + Flux (10GB), Fish Speech + Hunyuan (16GB with CP
 
 ## Gstack Infinity Loop
 
-RenderForge is the **Assembly** stage in the Gstack Infinity Loop:
+CutEngine is the **Assembly** stage in the Gstack Infinity Loop:
 
 ```
 Script Extraction (ReelsScriptExtractor)
   → Trend Analysis (CubeInsight)
   → Script Generation (N8N + Claude AI)
   → Local Manufacturing (VoiceCore + VisualCore)
-  → **Video Assembly (RenderForge)** ← You are here
+  → **Video Assembly (CutEngine)** ← You are here
   → Safe Distribution (ProfileCore)
   → Revenue → Back to CubeInsight
 ```
 
 ## Ecosystem — 5 Projects Connected
 
-RenderForge connects all 5 projects in the YouTube 270-channel automation pipeline:
+CutEngine connects all 5 projects in the YouTube 270-channel automation pipeline:
 
 | Project | Role | Integration |
 |---------|------|-------------|
-| **RenderForge** | Video render engine | Core |
+| **CutEngine** | Video render engine | Core |
 | **VisualCore** | GPU inference (Flux, Hunyuan, ESRGAN) | Create API providers |
 | **VoiceCore** | TTS (Fish Speech) | Create API provider |
 | **ProfileCore** | Anti-detect browser automation | `/x/v1/profiles/*` |
@@ -253,7 +253,7 @@ CUBEINSIGHT_ENABLED=true
 
 ## n8n Integration (Shotstack Migration)
 
-RenderForge is a **drop-in replacement** for Shotstack in n8n workflows. To migrate:
+CutEngine is a **drop-in replacement** for Shotstack in n8n workflows. To migrate:
 
 ### 1. Change the API URL
 
@@ -263,7 +263,7 @@ In your n8n Code nodes, replace:
 hostname: 'api.shotstack.io'
 path: '/edit/v1/render'
 
-// After (RenderForge)
+// After (CutEngine)
 hostname: 'host.docker.internal'
 port: 3000
 path: '/edit/v1/render'
@@ -291,13 +291,13 @@ The `x-api-key` header is ignored when `AUTH_ENABLED=false` (default). You can l
 
 ### Prerequisites
 
-RenderForge must be running on the host machine:
+CutEngine must be running on the host machine:
 ```bash
 # Start infrastructure
 docker compose -f docker/docker-compose.dev.yml up -d
 
-# Start RenderForge
-cd renderforge && pnpm dev
+# Start CutEngine
+cd cutengine && pnpm dev
 ```
 
 ## API Reference
@@ -389,7 +389,7 @@ create:
 ## Scaling
 
 ```bash
-docker compose up --scale renderforge=4 --scale chromium=4
+docker compose up --scale cutengine=4 --scale chromium=4
 ```
 
 Each worker picks jobs from the shared BullMQ queue. Workers and Chromium instances scale 1:1.
@@ -454,7 +454,7 @@ docs/
 ## Roadmap & TODO
 
 ### Completed ✅
-- [x] n8n에서 테스트 에피소드 1개 RenderForge로 실행 → Shotstack 결과물과 품질 비교
+- [x] n8n에서 테스트 에피소드 1개 CutEngine로 실행 → Shotstack 결과물과 품질 비교
 - [x] 기존 8개 실패 테스트 수정 → 331개 전부 통과
 - [x] 9:16 Shorts 렌더링 테스트 (1080x1920, 기획안대로)
 - [x] 풀 에피소드 렌더링 (3.4분, 5095프레임) 안정성 테스트 통과
@@ -467,7 +467,7 @@ docs/
 
 ### Immediate (Next)
 - [ ] n8n 워크플로우 실제 에피소드 렌더링 (실제 n8n 파이프라인 실행 → 10분+ 풀 에피소드)
-- [ ] 자막 35자 단위 분할 n8n 노드 검증 (n8n 워크플로우가 이미 분할 처리, RenderForge 측 추가 작업 불필요 확인)
+- [ ] 자막 35자 단위 분할 n8n 노드 검증 (n8n 워크플로우가 이미 분할 처리, CutEngine 측 추가 작업 불필요 확인)
 
 ### Near-term
 - [ ] RunPod RTX 4090 배포 (VoiceCore + VisualCore 연동)
@@ -476,7 +476,7 @@ docs/
 - [ ] 렌더링 속도 최적화 (현재 3.4분 영상 = ~20분 렌더 → 목표 5분 이내)
 
 ### Medium-term
-- [ ] CubeInsight → RenderForge 트렌드 데이터 피드백 루프
+- [ ] CubeInsight → CutEngine 트렌드 데이터 피드백 루프
 - [ ] ProfileCore HTTP API 서버 (v1.1)
 - [ ] 9:16 Shorts 자동 추출 엔진 최적화
 - [ ] LoRA 학습 데이터 준비 (9 Tier별 스타일)

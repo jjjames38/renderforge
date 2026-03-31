@@ -63,7 +63,7 @@ describe('buildCallbackPayload', () => {
     expect(payload.type).toBe('render');
     expect(payload.action).toBe('render');
     expect(payload.id).toBe('render-123');
-    expect(payload.owner).toBe('renderforge');
+    expect(payload.owner).toBe('cutengine');
     expect(payload.status).toBe('done');
     expect(payload.url).toBe('https://example.com/output.mp4');
     expect(payload.error).toBeNull();
@@ -96,7 +96,7 @@ describe('sendCallback', () => {
     type: 'render',
     action: 'render',
     id: 'render-001',
-    owner: 'renderforge',
+    owner: 'cutengine',
     status: 'done',
     url: '/serve/v1/assets/render-001/output.mp4',
     error: null,
@@ -107,7 +107,7 @@ describe('sendCallback', () => {
     type: 'render',
     action: 'render',
     id: 'render-002',
-    owner: 'renderforge',
+    owner: 'cutengine',
     status: 'failed',
     url: null,
     error: 'Encode error',
@@ -200,7 +200,7 @@ describe('Callback integration with render worker', () => {
     type: 'render',
     action: 'render',
     id: 'render-no-cb',
-    owner: 'renderforge',
+    owner: 'cutengine',
     status: 'done',
     url: '/serve/v1/assets/render-no-cb/output.mp4',
     error: null,
