@@ -2,7 +2,7 @@ import { parseTimeline } from './parser/index.js';
 import { buildScene } from './builder/index.js';
 import { captureFrames } from './capture/index.js';
 import { encode } from './encoder/index.js';
-import { prefetchAssets, applyPrefetchPaths } from './prefetch.js';
+import { prefetchAssets, applyPrefetchPaths, resolveAssetUrl } from './prefetch.js';
 import { progressHub } from '../api/progress.js';
 import type { IRTimeline } from './parser/types.js';
 import { mkdirSync } from 'fs';
@@ -52,13 +52,13 @@ export async function executePipeline(
       const prefetchResult = await prefetchAssets(ir.assets, prefetchDir);
       applyPrefetchPaths(ir.assets, prefetchResult.urlMap);
 
-      // Replace src URLs in scene layers with local paths
+      // Replace src URLs in scene layers with URLs accessible by Docker Chromium
       for (const scene of ir.scenes) {
         for (const layer of scene.layers) {
           if (layer.asset.src) {
             const localPath = prefetchResult.urlMap.get(layer.asset.src);
             if (localPath) {
-              layer.asset.src = `file://${localPath}`;
+              layer.asset.src = resolveAssetUrl(localPath);
             }
           }
         }

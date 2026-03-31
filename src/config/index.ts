@@ -24,6 +24,7 @@ export const config = {
   },
   chromium: {
     wsEndpoint: process.env.CHROMIUM_WS ?? 'ws://localhost:3001',
+    assetBaseUrl: process.env.CHROMIUM_ASSET_BASE ?? '',
   },
   storage: {
     driver: (process.env.STORAGE_DRIVER ?? 'local') as 'local' | 's3',

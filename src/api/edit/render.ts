@@ -2,12 +2,9 @@ import { FastifyInstance } from 'fastify';
 import { nanoid } from 'nanoid';
 import { schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { AppQueues } from '../../queue/queues.js';
+import type {} from '../../types/fastify.js';
 
 export async function renderRoutes(app: FastifyInstance) {
-  const db = (app as any).db as BetterSQLite3Database<typeof schema>;
-
   app.post('/edit/v1/render', async (req, reply) => {
     const body = req.body as any;
     const id = nanoid(21);
@@ -15,7 +12,7 @@ export async function renderRoutes(app: FastifyInstance) {
     const timelineStr = JSON.stringify(body.timeline);
     const outputStr = JSON.stringify(body.output);
 
-    await db.insert(schema.renders).values({
+    await app.db.insert(schema.renders).values({
       id,
       status: 'queued',
       timeline: timelineStr,
@@ -23,10 +20,9 @@ export async function renderRoutes(app: FastifyInstance) {
       callback: body.callback ?? null,
     });
 
-    // Enqueue render job if queues are available (not in test mode without queues)
-    const queues = (app as any).queues as AppQueues | undefined;
-    if (queues) {
-      await queues.render.add('render', {
+    // Enqueue render job if queues are available (not in test mode)
+    if (app.queues) {
+      await app.queues.render.add('render', {
         renderId: id,
         timeline: timelineStr,
         output: outputStr,
@@ -52,7 +48,7 @@ export async function renderRoutes(app: FastifyInstance) {
 
   app.get('/edit/v1/render/:id', async (req, reply) => {
     const { id } = req.params as { id: string };
-    const [render] = await db.select().from(schema.renders).where(eq(schema.renders.id, id));
+    const [render] = await app.db.select().from(schema.renders).where(eq(schema.renders.id, id));
 
     if (!render) {
       return reply.status(404).send({ success: false, message: 'Render not found' });

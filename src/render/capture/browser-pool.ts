@@ -4,11 +4,25 @@ import { config } from '../../config/index.js';
 let browser: Browser | null = null;
 
 export async function getBrowser(): Promise<Browser> {
-  if (!browser || !browser.connected) {
-    browser = await puppeteer.connect({
-      browserWSEndpoint: config.chromium.wsEndpoint,
-    });
+  if (browser && browser.connected) {
+    return browser;
   }
+
+  // Clean up stale reference
+  if (browser) {
+    try { browser.disconnect(); } catch { /* ignore */ }
+    browser = null;
+  }
+
+  browser = await puppeteer.connect({
+    browserWSEndpoint: config.chromium.wsEndpoint,
+  });
+
+  // Auto-clear on unexpected disconnect so next call reconnects
+  browser.on('disconnected', () => {
+    browser = null;
+  });
+
   return browser;
 }
 

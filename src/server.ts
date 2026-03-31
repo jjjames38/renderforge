@@ -24,11 +24,9 @@ import { healthRoutes } from './api/health.js';
 import { progressRoutes } from './api/progress.js';
 import { config } from './config/index.js';
 import { getRedisConnection } from './queue/connection.js';
-import type { Worker } from 'bullmq';
-import { createHealthResponse, checkRedisDep } from '../../shared/health.js';
+import type {} from './types/fastify.js';
 
 export async function createServer(opts?: { testing?: boolean }) {
-  const startTime = Date.now();
   const app = Fastify({
     logger: opts?.testing ? false : {
       transport: { target: 'pino-pretty' },
@@ -41,29 +39,18 @@ export async function createServer(opts?: { testing?: boolean }) {
   const dbPath = opts?.testing ? ':memory:' : undefined;
   const db = getDb(dbPath, { migrate: true });
 
-  // Attach db to app for routes to use
-  (app as any).db = db;
+  // Create queues early so they're available to route handlers
+  const queues = opts?.testing ? null : createQueues();
+
+  // Attach db and queues to app using decorate (visible to all encapsulated child contexts)
+  app.decorate('db', db);
+  app.decorate('queues', queues);
 
   app.get('/', async () => ({
     name: 'cutengine',
     version: '0.1.0',
     status: 'ok',
   }));
-
-  app.get('/health', async () => {
-    const deps: Record<string, 'healthy' | 'degraded' | 'offline'> = {};
-    try {
-      const { getRedisConnection } = await import('./queue/connection.js');
-      deps.redis = await checkRedisDep(getRedisConnection());
-    } catch {
-      deps.redis = 'offline';
-    }
-    if ((app as any).gpuManager) {
-      const mgr = (app as any).gpuManager;
-      deps.gpu = mgr.getStatus().is_swapping ? 'degraded' : 'healthy';
-    }
-    return createHealthResponse('cutengine', '0.1.0', startTime, deps);
-  });
 
   // Register static file serving for rendered assets
   const storagePath = resolve(config.storage.path);
@@ -92,11 +79,8 @@ export async function createServer(opts?: { testing?: boolean }) {
   await app.register(healthRoutes);
   await app.register(progressRoutes);
 
-  // Start render worker and queues (skip in test mode)
+  // Start workers (skip in test mode)
   if (!opts?.testing) {
-    const queues = createQueues();
-    (app as any).queues = queues;
-
     const renderWorker = createRenderWorker(db);
     (app as any).renderWorker = renderWorker;
 
@@ -214,7 +198,9 @@ export async function createServer(opts?: { testing?: boolean }) {
         }
       }
 
-      await Promise.all(Object.values(queues).map((q: any) => q.close()));
+      if (queues) {
+        await Promise.all(Object.values(queues).map((q: any) => q.close()));
+      }
 
       if (gpuManager) {
         await gpuManager.unloadAll();

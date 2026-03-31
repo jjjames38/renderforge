@@ -94,7 +94,7 @@ export function createRenderWorker(db?: ReturnType<typeof getDb>) {
       );
 
       // Update render record with result URL
-      const assetUrl = `/serve/v1/assets/${renderId}/output.${result.format}`;
+      const assetUrl = `/serve/v1/assets/renders/${renderId}/output.${result.format}`;
       await database.update(schema.renders)
         .set({ status: 'done', url: assetUrl, updatedAt: new Date() })
         .where(eq(schema.renders.id, renderId));

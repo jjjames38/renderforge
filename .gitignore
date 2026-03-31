@@ -6,3 +6,4 @@ data/
 .superpowers/
 .gstack/
 beyond-orbit-automation/
+test/e2e/output/

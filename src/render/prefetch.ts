@@ -1,9 +1,10 @@
 import { createHash } from 'crypto';
 import { mkdirSync, existsSync, createWriteStream } from 'fs';
-import { join, extname } from 'path';
+import { join, extname, relative, resolve } from 'path';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import type { IRExternalAsset } from './parser/types.js';
+import { config } from '../config/index.js';
 
 export interface PrefetchResult {
   /** Map from original URL to local file path */
@@ -149,4 +150,18 @@ export function applyPrefetchPaths(assets: IRExternalAsset[], urlMap: Map<string
       asset.localPath = localPath;
     }
   }
+}
+
+/**
+ * Convert a local file path to a URL accessible by Docker Chromium.
+ * Uses CHROMIUM_ASSET_BASE env var if set, otherwise derives from
+ * host.docker.internal + server port + static serve prefix.
+ */
+export function resolveAssetUrl(localPath: string): string {
+  if (config.chromium.assetBaseUrl) {
+    const relPath = relative(resolve(config.storage.path), localPath);
+    return `${config.chromium.assetBaseUrl}/${relPath}`;
+  }
+  const relPath = relative(resolve(config.storage.path), localPath);
+  return `http://host.docker.internal:${config.port}/serve/v1/assets/${relPath}`;
 }
