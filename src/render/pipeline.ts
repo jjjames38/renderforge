@@ -3,11 +3,13 @@ import { buildScene } from './builder/index.js';
 import { captureFrames } from './capture/index.js';
 import { encode } from './encoder/index.js';
 import { prefetchAssets, applyPrefetchPaths, resolveAssetUrl } from './prefetch.js';
+import { composeTimeline, canUseFFmpegCompositor } from './compositor/index.js';
 import { progressHub } from '../api/progress.js';
 import type { IRTimeline } from './parser/types.js';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
 import { renderTotal, renderDuration } from '../api/metrics.js';
+import { config } from '../config/index.js';
 
 export interface PipelineResult {
   outputPath: string;
@@ -83,10 +85,61 @@ export async function executePipeline(
       stageLogs.push(prefetchLog);
     }
 
+    // Stage 1.8: Route — FFmpeg compositor or Puppeteer?
+    const totalDuration = ir.scenes.reduce((sum, s) => sum + s.duration, 0);
+    const compositorForce = config.compositor?.forceMode ?? 'auto';
+    const routeResult = canUseFFmpegCompositor(ir, compositorForce);
+
+    if (routeResult.eligible && config.compositor?.enabled !== false) {
+      stageStart = Date.now();
+      await onStatus?.('compositing');
+      const outputPath = join(workDir, `output.${ir.output.format}`);
+
+      await composeTimeline(ir, workDir, outputPath, {
+        onProgress: renderId
+          ? (percent) => progressHub.emitProgress({
+              renderId: renderId!,
+              stage: 'compose',
+              percent,
+            })
+          : undefined,
+      });
+
+      stageLogs.push(logStage('compose', stageStart));
+
+      const totalMs = Date.now() - pipelineStart;
+      renderDuration.observe(totalMs / 1000);
+      renderTotal.inc({ status: 'completed' });
+
+      if (renderId) {
+        progressHub.emitProgress({ renderId, stage: 'done', percent: 100 });
+        progressHub.cleanup(renderId);
+      }
+
+      const logEntry = {
+        event: 'pipeline_complete',
+        renderer: 'compositor',
+        totalMs,
+        stages: stageLogs,
+      };
+      if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'test') {
+        console.log(JSON.stringify(logEntry));
+      }
+
+      return { outputPath, format: ir.output.format, duration: totalDuration };
+    }
+
+    // Puppeteer fallback path (original)
+    if (!routeResult.eligible) {
+      const logEntry = { event: 'compositor_fallback', reason: routeResult.reason };
+      if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'test') {
+        console.log(JSON.stringify(logEntry));
+      }
+    }
+
     // Stage 2: Build HTML scene
     stageStart = Date.now();
     await onStatus?.('rendering');
-    const totalDuration = ir.scenes.reduce((sum, s) => sum + s.duration, 0);
     const sceneHtml = buildScene(ir.scenes[0], ir.output, totalDuration);
     stageLogs.push(logStage('build', stageStart));
 

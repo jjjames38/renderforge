@@ -100,4 +100,8 @@ export const config = {
   encoder: {
     codec: process.env.ENCODER_CODEC ?? 'auto',
   },
+  compositor: {
+    enabled: process.env.COMPOSITOR_ENABLED !== 'false',
+    forceMode: (process.env.COMPOSITOR_FORCE as 'ffmpeg' | 'puppeteer' | 'auto') ?? 'auto',
+  },
 } as const;
