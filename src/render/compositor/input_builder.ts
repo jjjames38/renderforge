@@ -68,21 +68,28 @@ function buildSingleInput(layer: IRLayer, totalDuration: number): string[] {
 
 /**
  * Build input arguments for pre-rendered text/caption overlay PNGs.
- * Called after text_renderer produces PNG files.
+ * Called after pre_renderer produces PNG files.
+ *
+ * Each PNG is looped for the full timeline duration so FFmpeg's enable=between()
+ * filter can reference any timestamp. Previously hardcoded to -t 1 which caused
+ * captions starting after t=1s to produce blank overlays.
  *
  * @param pngPaths - Paths to pre-rendered transparent PNGs
  * @param startIndex - Input index offset (after media inputs)
+ * @param totalDuration - Total timeline duration in seconds
  * @returns Additional -i arguments and index map
  */
 export function buildOverlayInputs(
   pngPaths: string[],
   startIndex: number,
+  totalDuration: number,
 ): { args: string[]; indexMap: Map<string, number> } {
   const args: string[] = [];
   const indexMap = new Map<string, number>();
+  const loopDuration = String(totalDuration + 1);
 
   for (let i = 0; i < pngPaths.length; i++) {
-    args.push('-loop', '1', '-t', '1', '-i', pngPaths[i]);
+    args.push('-loop', '1', '-t', loopDuration, '-i', pngPaths[i]);
     indexMap.set(pngPaths[i], startIndex + i);
   }
 

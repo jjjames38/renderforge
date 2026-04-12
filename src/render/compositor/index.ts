@@ -6,8 +6,9 @@ import { writeFileSync } from 'fs';
 import { join } from 'path';
 import type { IRTimeline } from '../parser/types.js';
 import type { CompositorOptions } from './types.js';
-import { buildInputs } from './input_builder.js';
+import { buildInputs, buildOverlayInputs } from './input_builder.js';
 import { buildFilterGraph } from './filter_graph.js';
+import { preRenderHtmlLayers } from './pre_renderer.js';
 import { buildAudioMix } from '../encoder/audio-mixer.js';
 import { resolveCodec, getQualityArgs, getPresetArgs } from '../encoder/hwaccel.js';
 import { config } from '../../config/index.js';
@@ -33,18 +34,43 @@ export async function composeTimeline(
   // 1. Build media inputs (-i arguments)
   const inputs = buildInputs(ir, totalDuration);
 
-  // 2. Build video filter_complex
-  const graph = buildFilterGraph(ir, inputs.indexMap, prefetchDir);
+  // 1.5 Pre-render HTML caption layers to transparent PNGs (Phase B)
+  let preRendered: Awaited<ReturnType<typeof preRenderHtmlLayers>> = [];
+  let overlayInputMap = new Map<string, number>();
+  let overlayArgs: string[] = [];
+
+  try {
+    const { width, height } = ir.output;
+    preRendered = await preRenderHtmlLayers(ir, workDir, width, height);
+  } catch {
+    // Puppeteer not available — skip HTML pre-render (Phase A behavior)
+    preRendered = [];
+  }
+
+  // 1.6 Add pre-rendered PNGs as FFmpeg inputs
+  if (preRendered.length > 0) {
+    const overlayResult = buildOverlayInputs(
+      preRendered.map(p => p.pngPath),
+      inputs.count,
+      totalDuration,
+    );
+    overlayInputMap = overlayResult.indexMap;
+    overlayArgs = overlayResult.args;
+  }
+
+  // 2. Build video filter_complex (with Phase B overlay info)
+  const graph = buildFilterGraph(ir, inputs.indexMap, prefetchDir, preRendered, overlayInputMap);
 
   // 3. Build audio filter_complex (reuse existing audio-mixer)
+  // Audio inputs start after video inputs AND overlay PNG inputs
   const hasAudio = ir.audio.clips.length > 0 || ir.audio.soundtrack;
   let audioFilterComplex = '';
   let audioInputArgs: string[] = [];
   let audioMapArgs: string[] = [];
 
   if (hasAudio && !ir.output.mute) {
-    // Audio inputs start after video inputs
-    const audioMix = buildAudioMixWithOffset(ir, totalDuration, inputs.count);
+    const audioOffset = inputs.count + preRendered.length;
+    const audioMix = buildAudioMixWithOffset(ir, totalDuration, audioOffset);
     audioFilterComplex = audioMix.filterComplex;
     audioInputArgs = audioMix.inputArgs;
     audioMapArgs = audioMix.mapArgs;
@@ -67,6 +93,7 @@ export async function composeTimeline(
 
   const args: string[] = [
     ...inputs.args,          // Video inputs (-loop 1 -t D -i path ...)
+    ...overlayArgs,          // Pre-rendered PNG overlay inputs (Phase B)
     ...audioInputArgs,       // Audio inputs (-i narration.mp3 -i bgm.mp3 ...)
     '-filter_complex_script', filterScriptPath,
     '-map', graph.videoOutputLabel,

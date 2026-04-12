@@ -7,6 +7,7 @@
 
 import type { IRTimeline, IRScene, IRLayer } from '../parser/types.js';
 import type { FFmpegFilterChain } from './types.js';
+import type { PreRenderResult } from './pre_renderer.js';
 import {
   mapKenBurns,
   mapColorFilter,
@@ -38,6 +39,8 @@ export function buildFilterGraph(
   ir: IRTimeline,
   inputIndexMap: Map<string, number>,
   prefetchDir: string,
+  preRendered?: PreRenderResult[],
+  overlayInputMap?: Map<string, number>,
 ): FilterGraphResult {
   const { width, height, fps } = ir.output;
   const totalDuration = ir.scenes.reduce((sum, s) => sum + s.duration, 0);
@@ -186,11 +189,57 @@ export function buildFilterGraph(
     compositeLabel = withTextLabel;
   }
 
+  // Phase B: Apply pre-rendered HTML caption PNG overlays
+  if (preRendered && preRendered.length > 0 && overlayInputMap) {
+    compositeLabel = buildHtmlOverlayChain(
+      preRendered, overlayInputMap, compositeLabel, chains, nextLabel,
+    );
+  }
+
   return {
     filterComplex: chains.join(';\n'),
     videoOutputLabel: `[${compositeLabel}]`,
     textOverlays: [], // already applied in filter_complex
   };
+}
+
+/**
+ * Build FFmpeg overlay chain for pre-rendered HTML caption PNGs.
+ *
+ * Each PNG is overlaid at 0:0 (full-frame, CSS positioning already baked in)
+ * with timing-gated enable=between() filter.
+ * Overlays are chained sequentially: base → overlay1 → overlay2 → ... → final.
+ *
+ * @returns Final composite label after all overlays applied
+ */
+export function buildHtmlOverlayChain(
+  preRendered: PreRenderResult[],
+  overlayInputMap: Map<string, number>,
+  baseLabel: string,
+  chains: string[],
+  nextLabel: (prefix: string) => string,
+): string {
+  let currentLabel = baseLabel;
+
+  // Sort by start time for deterministic overlay order
+  const sorted = [...preRendered].sort((a, b) => a.timing.start - b.timing.start);
+
+  for (const pr of sorted) {
+    const inputIdx = overlayInputMap.get(pr.pngPath);
+    if (inputIdx === undefined) continue;
+
+    const outLabel = nextLabel('ho');
+    const start = pr.timing.start;
+    const end = start + pr.timing.duration;
+
+    chains.push(
+      `[${currentLabel}][${inputIdx}:v]overlay=0:0:enable='between(t,${start.toFixed(3)},${end.toFixed(3)})'[${outLabel}]`,
+    );
+
+    currentLabel = outLabel;
+  }
+
+  return currentLabel;
 }
 
 /**

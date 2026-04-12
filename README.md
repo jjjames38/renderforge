@@ -224,7 +224,7 @@ Compatible pairs: Fish Speech + Flux (10GB), Fish Speech + Hunyuan (16GB with CP
 CutEngine is the **Assembly** stage in the Gstack Infinity Loop:
 
 ```
-Script Extraction (ReelsScriptExtractor)
+Script Extraction (Hooksight)
   → Trend Analysis (CubeInsight)
   → Script Generation (N8N + Claude AI)
   → Local Manufacturing (VoiceCore + VisualCore)
