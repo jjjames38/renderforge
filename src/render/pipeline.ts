@@ -203,12 +203,15 @@ export async function executePipeline(
     await onStatus?.('saving');
     const outputPath = join(workDir, `output.${ir.output.format}`);
 
+    // Respect output.mute — skip audio when muted (consistent with compositor path)
+    const hasAudio = !ir.output.mute && (ir.audio.clips.length > 0 || !!ir.audio.soundtrack);
+
     await encode({
       frameDir: captureResult.frameDir,
       framePattern: captureResult.framePattern,
       frameCount: captureResult.frameCount,
       output: ir.output,
-      audio: ir.audio.clips.length > 0 || ir.audio.soundtrack ? ir.audio : undefined,
+      audio: hasAudio ? ir.audio : undefined,
       outputPath,
       captureFps: captureResult.captureFps,
       outputFps: captureResult.outputFps,

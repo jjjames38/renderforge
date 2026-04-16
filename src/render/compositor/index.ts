@@ -122,10 +122,11 @@ export async function composeTimeline(
     ...presetArgs,
     qualityFlag, qualityValue,
     '-pix_fmt', 'yuv420p',
+    ...(audioFilterComplex ? ['-c:a', 'aac'] : []),
     '-ac', '2',
     '-b:a', '128k',
+    '-t', String(totalDuration),
     '-movflags', '+faststart',
-    '-shortest',
     '-y',
     outputPath,
   ];

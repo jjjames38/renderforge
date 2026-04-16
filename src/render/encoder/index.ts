@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { existsSync, statSync } from 'fs';
 import { IROutput, IRAudioMix } from '../parser/types.js';
 import { buildAudioMix } from './audio-mixer.js';
 import { resolveCodec, getQualityArgs, getPresetArgs, type HWCodec } from './hwaccel.js';
@@ -19,6 +20,54 @@ export interface EncodeOptions {
 
 export async function encode(opts: EncodeOptions): Promise<string> {
   const args = buildFFmpegArgs(opts);
+
+  // Log the full FFmpeg command for debugging audio issues
+  const logEntry = {
+    event: 'ffmpeg_encode',
+    args: ['ffmpeg', ...args].join(' '),
+    frameCount: opts.frameCount,
+    hasAudio: !!(opts.audio && (opts.audio.clips.length > 0 || opts.audio.soundtrack)),
+    audioClips: opts.audio?.clips.length ?? 0,
+    hasSoundtrack: !!opts.audio?.soundtrack,
+  };
+
+  // Validate audio files exist and are non-empty
+  if (opts.audio) {
+    const audioFiles: { src: string; size: number; exists: boolean }[] = [];
+    for (const clip of opts.audio.clips) {
+      const exists = existsSync(clip.src);
+      const size = exists ? statSync(clip.src).size : 0;
+      audioFiles.push({ src: clip.src, size, exists });
+      if (!exists || size === 0) {
+        console.error(JSON.stringify({
+          event: 'audio_file_invalid',
+          src: clip.src,
+          exists,
+          size,
+        }));
+      }
+    }
+    if (opts.audio.soundtrack) {
+      const exists = existsSync(opts.audio.soundtrack.src);
+      const size = exists ? statSync(opts.audio.soundtrack.src).size : 0;
+      audioFiles.push({ src: opts.audio.soundtrack.src, size, exists });
+      if (!exists || size === 0) {
+        console.error(JSON.stringify({
+          event: 'audio_file_invalid',
+          src: opts.audio.soundtrack.src,
+          exists,
+          size,
+          type: 'soundtrack',
+        }));
+      }
+    }
+    (logEntry as any).audioFiles = audioFiles;
+  }
+
+  if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'test') {
+    console.log(JSON.stringify(logEntry));
+  }
+
   return runFFmpeg(args, opts.outputPath);
 }
 
@@ -43,6 +92,9 @@ export function buildFFmpegArgs(opts: EncodeOptions, codecOverride?: HWCodec): s
         const mix = buildAudioMix(opts.audio!, totalDuration);
 
         if (mix.filterComplex) {
+          // Use explicit -t instead of -shortest to avoid known FFmpeg issues
+          // where -shortest + image sequence + filter_complex can produce silent audio.
+          // All audio streams are already padded to totalDuration via apad, so -t is safe.
           return [
             '-framerate', String(inputFps),
             '-i', `${frameDir}/${framePattern}`,
@@ -53,11 +105,12 @@ export function buildFFmpegArgs(opts: EncodeOptions, codecOverride?: HWCodec): s
             ...presetArgs,
             qualityFlag, qualityValue,
             '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac',
             '-ac', '2',
             '-b:a', '128k',
             ...interpolationArgs,
+            '-t', String(totalDuration),
             '-movflags', '+faststart',
-            '-shortest',
             '-y',
             opts.outputPath,
           ];

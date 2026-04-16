@@ -162,7 +162,7 @@ export async function renderParallel(
         '-c:v', 'copy',   // No video re-encode
         '-c:a', 'aac',
         '-b:a', '192k',
-        '-shortest',
+        '-t', String(totalDuration),
         '-y',
         outputPath,
       ]);

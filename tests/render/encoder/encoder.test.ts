@@ -156,6 +156,39 @@ describe('buildFFmpegArgs', () => {
   });
 });
 
+describe('buildFFmpegArgs with audio', () => {
+  it('uses -c:a aac and -t instead of -shortest for mp4 with audio', () => {
+    const audio: IRAudioMix = {
+      clips: [{ src: '/audio/narration.mp3', start: 0, duration: 10, volume: 1 }],
+      soundtrack: { src: '/audio/bgm.mp3', effect: 'fadeInFadeOut', volume: 0.3 },
+    };
+    const args = buildFFmpegArgs(makeOpts({ audio, frameCount: 250 }));
+
+    // Must have explicit AAC codec
+    expect(args).toContain('-c:a');
+    expect(args[args.indexOf('-c:a') + 1]).toBe('aac');
+
+    // Must use -t for exact duration control (not -shortest which can cause silent audio)
+    expect(args).toContain('-t');
+    expect(args).not.toContain('-shortest');
+
+    // Duration should be frameCount / fps = 250 / 25 = 10
+    const tIdx = args.indexOf('-t');
+    expect(args[tIdx + 1]).toBe('10');
+
+    // Must have filter_complex with audio mixing
+    expect(args).toContain('-filter_complex');
+    expect(args).toContain('-map');
+  });
+
+  it('does not include audio args when no audio provided', () => {
+    const args = buildFFmpegArgs(makeOpts());
+    expect(args).not.toContain('-c:a');
+    expect(args).not.toContain('-t');
+    expect(args).not.toContain('-filter_complex');
+  });
+});
+
 // ============================================================
 // buildAudioMix
 // ============================================================
@@ -353,7 +386,10 @@ describe('buildFFmpegArgs with hardware codecs', () => {
     );
     expect(args).toContain('h264_nvenc');
     expect(args).toContain('-cq');
-    expect(args).toContain('-shortest');
+    expect(args).toContain('-c:a');
+    expect(args).toContain('aac');
+    expect(args).toContain('-t');
+    expect(args).not.toContain('-shortest');
   });
 });
 
